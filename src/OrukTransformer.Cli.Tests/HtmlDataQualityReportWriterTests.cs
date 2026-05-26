@@ -76,6 +76,23 @@ public class HtmlDataQualityReportWriterTests
     }
 
     [Fact]
+    public void BuildHtml_OverallWarnings_AppearInOverallSummary()
+    {
+        var warning = "The supplied ORUK URL appears malformed due to a duplicated URL scheme.";
+        var html = HtmlDataQualityReportWriter.BuildHtml([], SourceUrl, [warning]);
+
+        Assert.Contains("Overall VODIM Summary", html);
+        Assert.Contains("Input warnings", html);
+        Assert.Contains(warning, html);
+
+        var summaryHeadingIndex = html.IndexOf("<h2>Overall VODIM Summary</h2>", StringComparison.Ordinal);
+        var summaryEndIndex = html.IndexOf("</section>", summaryHeadingIndex, StringComparison.Ordinal);
+        var summarySection = html.Substring(summaryHeadingIndex, summaryEndIndex - summaryHeadingIndex);
+        Assert.Contains("Input warnings", summarySection);
+        Assert.Contains(warning, summarySection);
+    }
+
+    [Fact]
     public void BuildHtml_IncludesServiceCount()
     {
         var report = BuildReport("svc-1", [

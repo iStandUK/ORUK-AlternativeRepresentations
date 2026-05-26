@@ -91,20 +91,6 @@ var rootCommand = new RootCommand(
 rootCommand.SetAction(async (ParseResult parseResult, CancellationToken cancellationToken) =>
 {
     var orukUrlRaw = parseResult.GetValue(orukUrlOption)!;
-    if (!Uri.TryCreate(orukUrlRaw, UriKind.Absolute, out var orukUrl))
-    {
-        Console.Error.WriteLine($"Error: '--oruk-url' value '{orukUrlRaw}' is not a valid absolute URI.");
-        Environment.Exit(1);
-        return;
-    }
-    if (LooksLikeDuplicatedScheme(orukUrlRaw, orukUrl))
-    {
-        Console.Error.WriteLine(
-            $"Error: '--oruk-url' value '{orukUrlRaw}' appears malformed (duplicate URL scheme). " +
-            "Use a URL like 'https://example.org/services'.");
-        Environment.Exit(1);
-        return;
-    }
     var jsonLd = parseResult.GetValue(jsonLdOption);
     var maxRecords = parseResult.GetValue(maxRecordsOption);
     var verbose = parseResult.GetValue(verboseOption);
@@ -116,6 +102,37 @@ rootCommand.SetAction(async (ParseResult parseResult, CancellationToken cancella
     var writingJsonToStdout = jsonLd is null;
     var logLevelProvided = WasOptionProvided(parseResult, "--log-level");
     var quietProvided = WasOptionProvided(parseResult, "--quiet");
+
+    if (!Uri.TryCreate(orukUrlRaw, UriKind.Absolute, out var orukUrl))
+    {
+        Console.Error.WriteLine($"Error: '--oruk-url' value '{orukUrlRaw}' is not a valid absolute URI.");
+        Environment.Exit(1);
+        return;
+    }
+    if (LooksLikeDuplicatedScheme(orukUrlRaw, orukUrl))
+    {
+        const string warning =
+            "The supplied ORUK URL appears malformed due to a duplicated URL scheme. " +
+            "Check the URL and use a single scheme prefix such as https://example.org/services.";
+        Console.Error.WriteLine(
+            $"Error: '--oruk-url' value '{orukUrlRaw}' appears malformed (duplicate URL scheme). " +
+            "Use a URL like 'https://example.org/services'.");
+
+        if (dataQualityReport is not null)
+        {
+            var mismatchReportWriter = new HtmlDataQualityReportWriter();
+            await mismatchReportWriter.WriteAsync(
+                [],
+                orukUrl,
+                dataQualityReport,
+                [warning],
+                cancellationToken);
+            Console.Error.WriteLine($"Data-quality report written to '{dataQualityReport.FullName}'.");
+        }
+
+        Environment.Exit(1);
+        return;
+    }
 
     // Validate --format
     if (!string.Equals(format, "json-ld", StringComparison.OrdinalIgnoreCase))
