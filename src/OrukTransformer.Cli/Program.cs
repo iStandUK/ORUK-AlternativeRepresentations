@@ -97,6 +97,14 @@ rootCommand.SetAction(async (ParseResult parseResult, CancellationToken cancella
         Environment.Exit(1);
         return;
     }
+    if (LooksLikeDuplicatedScheme(orukUrlRaw, orukUrl))
+    {
+        Console.Error.WriteLine(
+            $"Error: '--oruk-url' value '{orukUrlRaw}' appears malformed (duplicate URL scheme). " +
+            "Use a URL like 'https://example.org/services'.");
+        Environment.Exit(1);
+        return;
+    }
     var jsonLd = parseResult.GetValue(jsonLdOption);
     var maxRecords = parseResult.GetValue(maxRecordsOption);
     var verbose = parseResult.GetValue(verboseOption);
@@ -198,3 +206,25 @@ static bool WasOptionProvided(ParseResult parseResult, string longAlias) =>
     parseResult.Tokens.Any(t =>
         string.Equals(t.Value, longAlias, StringComparison.OrdinalIgnoreCase)
         || t.Value.StartsWith($"{longAlias}=", StringComparison.OrdinalIgnoreCase));
+
+static bool LooksLikeDuplicatedScheme(string rawUrl, Uri parsedUrl)
+{
+    if (!parsedUrl.Scheme.Equals(Uri.UriSchemeHttp, StringComparison.OrdinalIgnoreCase)
+        && !parsedUrl.Scheme.Equals(Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase))
+    {
+        return false;
+    }
+
+    var raw = rawUrl.Trim();
+    var schemePrefix = $"{parsedUrl.Scheme}://";
+    if (!raw.StartsWith(schemePrefix, StringComparison.OrdinalIgnoreCase))
+    {
+        return false;
+    }
+
+    var remainder = raw[schemePrefix.Length..];
+    return remainder.StartsWith("http://", StringComparison.OrdinalIgnoreCase)
+           || remainder.StartsWith("https://", StringComparison.OrdinalIgnoreCase)
+           || remainder.StartsWith("http//", StringComparison.OrdinalIgnoreCase)
+           || remainder.StartsWith("https//", StringComparison.OrdinalIgnoreCase);
+}
