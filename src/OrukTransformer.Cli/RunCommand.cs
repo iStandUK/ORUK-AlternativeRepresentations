@@ -111,7 +111,7 @@ public sealed class RunCommand
         if (dataQualityReportFile is not null)
         {
             await _dataQualityReportWriter.WriteAsync(reports, orukUrl, dataQualityReportFile,
-                cancellationToken);
+                cancellationToken: cancellationToken);
             _logger.LogInformation("Data-quality report written to {File}.",
                 dataQualityReportFile.FullName);
         }

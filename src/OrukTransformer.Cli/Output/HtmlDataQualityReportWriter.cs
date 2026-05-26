@@ -14,15 +14,19 @@ public sealed class HtmlDataQualityReportWriter : IDataQualityReportWriter
         IReadOnlyList<TransformationReport> reports,
         Uri sourceUrl,
         FileInfo outputFile,
+        IReadOnlyList<string>? overallWarnings = null,
         CancellationToken cancellationToken = default)
     {
-        var html = BuildHtml(reports, sourceUrl);
+        var html = BuildHtml(reports, sourceUrl, overallWarnings);
         await File.WriteAllTextAsync(outputFile.FullName, html, Encoding.UTF8, cancellationToken);
     }
 
     // ── Internal builder (internal for testability) ───────────────────────────────
 
-    internal static string BuildHtml(IReadOnlyList<TransformationReport> reports, Uri sourceUrl)
+    internal static string BuildHtml(
+        IReadOnlyList<TransformationReport> reports,
+        Uri sourceUrl,
+        IReadOnlyList<string>? overallWarnings = null)
     {
         // Aggregate all records across all services, grouped by SourcePath
         var allRecords = reports.SelectMany(r => r.Records).ToList();
@@ -98,6 +102,18 @@ public sealed class HtmlDataQualityReportWriter : IDataQualityReportWriter
         AppendPieChart(sb, totalV, totalO, totalD, totalI, totalM, totalU, totalAll);
 
         sb.AppendLine("      </div>");
+        if (overallWarnings is { Count: > 0 })
+        {
+            sb.AppendLine("      <div class=\"summary-alerts\">");
+            sb.AppendLine("        <h3>Input warnings</h3>");
+            sb.AppendLine("        <ul class=\"summary-warning-list\">");
+            foreach (var warning in overallWarnings.Where(w => !string.IsNullOrWhiteSpace(w)))
+            {
+                sb.AppendLine($"          <li>{Encode(warning)}</li>");
+            }
+            sb.AppendLine("        </ul>");
+            sb.AppendLine("      </div>");
+        }
         sb.AppendLine("    </section>");
 
         // ── Per-field sections ────────────────────────────────────────────────────
@@ -574,6 +590,30 @@ public sealed class HtmlDataQualityReportWriter : IDataQualityReportWriter
         }
 
         .summary-table { max-width: 500px; flex-shrink: 0; }
+
+        .summary-alerts {
+          margin-top: 1rem;
+          padding: 0.8rem 1rem;
+          border: 1px solid var(--istanduk-border);
+          border-left: 4px solid var(--vodim-other);
+          border-radius: 6px;
+          background: var(--vodim-other-bg);
+          color: var(--istanduk-text);
+        }
+
+        .summary-alerts h3 {
+          margin: 0 0 0.5rem 0;
+          font-size: 1rem;
+        }
+
+        .summary-warning-list {
+          margin: 0;
+          padding-left: 1.1rem;
+        }
+
+        .summary-warning-list li {
+          margin: 0.2rem 0;
+        }
 
         .pie-chart {
           flex-shrink: 0;

@@ -24,10 +24,14 @@ public interface IDataQualityReportWriter
     /// <param name="reports">Per-service transformation reports.</param>
     /// <param name="sourceUrl">The ORUK endpoint URL, used in the report header.</param>
     /// <param name="outputFile">File to write the HTML report to.</param>
+    /// <param name="overallWarnings">
+    /// Optional report-level warnings to display under the Overall VODIM Summary.
+    /// </param>
     /// <param name="cancellationToken">Cancellation token.</param>
     Task WriteAsync(
         IReadOnlyList<TransformationReport> reports,
         Uri sourceUrl,
         FileInfo outputFile,
+        IReadOnlyList<string>? overallWarnings = null,
         CancellationToken cancellationToken = default);
 }
