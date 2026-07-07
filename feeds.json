@@ -5,15 +5,44 @@
     "aliases": [ "bristol" ]
   },
   {
+    "url": "https://api.familyinfo.buckinghamshire.gov.uk/api/v1",
+    "name": "Buckinghamshire",
+    "aliases": ["buckinghamshire", "bucks"]
+  },
+  {
+    "url": "https://api.porism.com/ServiceDirectoryServiceCQC",
+    "name": "Care Quality Commission",
+    "aliases": ["cqc"]
+  },
+  {
     "url": "https://dorset.localplacedirectory.org.uk/aggregator/services",
     "name": "Dorset",
     "aliases": ["dorset"]
   },
-
+  {
+    "url": "https://openreferral.localgovdrupal.org/openreferral/v1",
+    "name": "Cumbria",
+    "aliases": ["cumbria"]
+  },
+  {
+    "url": "https://lgaapi.connecttosupport.org",
+    "name": "Hull",
+    "aliases": ["hull", "hull-city"]
+  },
   {
     "url": "https://northlincs.openplace.directory/o/OpenReferralService/v3",
     "name": "North Lincolnshire",
     "aliases": ["northlincs", "north-lincs", "northlincolnshire"]
+  },
+  {
+    "url": "https://opensessions.io/api/rpde/OpenReferralFeed/",
+    "name": "Open Sessions (OpenActive)",
+    "aliases": ["opensessions", "open-sessions", "openactive"]
+  },
+  {
+    "url": "https://penninelancs.openplace.directory/o/ServiceDirectoryService/v2",
+    "name": "Pennine Lancashire",
+    "aliases": ["penninelancs", "pennine-lancashire", "pennine-lancs"]
   },
   {
     "url": "https://shropshire.openplace.directory/o/OpenReferralService/v3",
@@ -21,8 +50,8 @@
     "aliases": ["shropshire"]
   },
   {
-    "url": "https://opensessions.io/api/rpde/OpenReferralFeed/",
-    "name": "Open Sessions (OpenActive)",
-    "aliases": ["opensessions", "open-sessions", "openactive"]
+    "url": "https://directory.southampton.gov.uk/api",
+    "name": "Southampton",
+    "aliases": ["southampton"]
   }
 ]
