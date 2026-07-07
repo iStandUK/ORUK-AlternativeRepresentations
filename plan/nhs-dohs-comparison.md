@@ -2,6 +2,8 @@
 
 *Planning-session brief. Prepared from six verified dimension analyses (entity topology, field crosswalk, API surface, identifiers/geography, taxonomy/metadata, coverage/fidelity). Where a verifier corrected an original claim, the correction is used here.*
 
+> **Update — 2026-07-07 (UPRN):** This brief originally treated the missing UPRN as a hard blocker requiring third-party OS/AddressBase geocoding. That is **superseded**. The **NHS Organisation Data Service (ODS)** now holds UPRN and exposes it via the **open-access ORD API** (`GET https://directory.spineservices.nhs.uk/ORD/2-0-0/organisations/{ODSCode}` → `GeoLoc.Location.UPRN`), joinable on the **same `ODSCode`** DoHS returns — verified live (`RBQ → 38150603`; GP practice `A81001 → 100110780253`; site `RBQ07`/RC2 → `40074525`). Caveats: coverage is **partial** (only new/address-changed ODS records are UPRN-stamped — e.g. `Q69` returns none), and the strategic surface is the newer *Organisation Data Terminology – FHIR API* (confirm it emits `uprn`). §1, §3, §6, §8, §9 and §10 below reflect this.
+
 ---
 
 ## 1. Executive summary
@@ -13,7 +15,7 @@ Everything else follows from that inversion. NHS has **no Service entity at all*
 **Feasibility verdict — blunt:**
 
 - **How much of a useful ORUK `Service` record is sourceable from NHS? Well under ~15%.** From NHS you can populate a synthesised `Service.id`, `Service.name` (one array element), `Service.organization_id` (from `ODSCode`), a `status` down-cast from org-level `OrganisationStatus`, and `last_modified` (collapsed from `LastUpdatedDates`). Contact channels (`email`/`url`/phone) are partially sourceable **at organisation level** via the NHS `Contacts` array and can be inherited down. Everything else — `description`, `eligibility`, `cost_options`, `languages`, `application_process`, `required_documents`, `funding`, `program`, `service_areas`, assurance, real recurrence schedules — emits **empty**.
-- **Realistic conformance ceiling:** **Bronze, and only with external enrichment.** ORUK marks `Location.uprn` as a required field for Location records, and NHS DoHS carries **no UPRN anywhere** — so Bronze is unreachable from NHS data alone without an Ordnance Survey postcode→UPRN lookup. **Silver** (which leans on populated taxonomy terms) is reachable only via a *synthesised* NHS-org-type taxonomy with no resolvable `term_uri`. **Gold** (schedules + eligibility + cost + regular assurance reviews) is **not achievable** from NHS alone.
+- **Realistic conformance ceiling:** **Bronze, reachable via a sibling NHS API (see the UPRN update below).** ORUK marks `Location.uprn` as a required field for Location records, and the DoHS *search* API carries **no UPRN**. However — correcting this brief's original assumption — the **NHS Organisation Data Service (ODS) does now hold UPRN**, exposed via the open-access **ORD API** keyed by the same `ODSCode`. This removes the need for a fuzzy postcode→UPRN geocode and makes Bronze attainable for records ODS has matched (coverage is partial — see §6). **Silver** (which leans on populated taxonomy terms) is reachable only via a *synthesised* NHS-org-type taxonomy with no resolvable `term_uri`. **Gold** (schedules + eligibility + cost + regular assurance reviews) is **not achievable** from NHS alone.
 
 > **One-line takeaway for the session:** This is not a field-renaming exercise. It is *entity synthesis + external enrichment*. NHS gives you a strong Organisation/Location/geolocation skeleton and near-empty Services. Plan the effort around identity minting, entity fan-out, and UPRN sourcing — not attribute copying.
 
@@ -81,7 +83,7 @@ Relationship legend: **exact** (direct copy) · **partial** (maps, with loss/car
 | `Location.name` | `OrganisationName` | derived | Reuse org name (no distinct site name). |
 | `Location.organization_id` | `ODSCode` | derived | Direct FK. |
 | `Location.latitude` / `longitude` (double) | `Latitude`/`Longitude` (**string**) **or** `Geocode.coordinates[]` | derived | **Type convert** string→double. Two redundant sources to reconcile. |
-| `Location.uprn` (**ORUK-required**) | — | nhs-missing | **Hard gap.** No UPRN in NHS. External OS AddressBase / OS Places lookup required. |
+| `Location.uprn` (**ORUK-required**) | — (DoHS) / `GeoLoc.Location.UPRN` (**ODS ORD API**) | derived | **Not in the DoHS search API, but the sibling ODS ORD API supplies UPRN directly, keyed by the same ODSCode** (verified live — see §6). Partial coverage; fallback needed for nulls. |
 | `Location.usrn` (optional) | — | nhs-missing | No source; safe to omit. |
 | `Location.external_identifiers[]` (`identifier`, `identifier_scheme`, `identifier_type`) | `ODSCode` | derived | Best structured home for raw ODSCode: `identifier=ODSCode, identifier_scheme="ODS"`. |
 | `Location.location_type` | — | nhs-missing | Default `"physical"`. |
@@ -171,10 +173,13 @@ Relationship legend: **exact** (direct copy) · **partial** (maps, with loss/car
 
 ## 6. UK localisation & conformance
 
-- **UPRN — the conformance pivot.** ORUK marks `Location.uprn` as required for Location records; NHS DoHS provides **zero UPRNs**. Convenient leverage: the **NHS OAS itself already directs integrators to the Ordnance Survey Places API** for postcode→coordinate lookup — the same OS/AddressBase ecosystem that issues UPRNs. Extend that integration to capture UPRN.
-  - *Verifier honesty note:* the standard doc defines Bronze only as "minimal required fields populated" and does not *explicitly* name UPRN as the Bronze gate; the C# `OrukLocation.Uprn` is a nullable string. So "Bronze hinges on UPRN" is a **strong, defensible inference**, not a spec-stated rule. Either way, shipping UPRN-less Locations risks rejection by strict validators.
-  - **Licensing reality:** OS OpenUPRN gives only UPRN+coordinate (no address→UPRN match); reliable per-address matching needs **AddressBase Premium or OS Places API**, whose redistribution terms may constrain an open ORUK API.
-- **USRN** — optional; derive from OS AddressBase or omit.
+- **UPRN — the conformance pivot, now largely unblocked by a sibling NHS API.** ORUK marks `Location.uprn` as required for Location records; the DoHS *search* API returns **zero UPRNs**. **But the correct source is the NHS Organisation Data Service, not third-party geocoding.** ODS has migrated to addressing software that records UPRN against organisation/site records, and it is exposed by the **ORD API** (`GET https://directory.spineservices.nhs.uk/ORD/2-0-0/organisations/{ODSCode}`) at `GeoLoc.Location.UPRN`. This means a **direct, authoritative `ODSCode → UPRN` join on the same key DoHS already returns** — no fuzzy postcode→UPRN match, and OS/AddressBase licensing is absorbed upstream by NHS.
+  - **Verified live (2026-07-07):** `RBQ` → `UPRN 38150603`; `A81001` (GP practice) → `100110780253`; `RX2` → `200004018207`; `RBQ07` (a **site**, `orgRecordClass RC2`) → `40074525`. The ORD API is **open-access — no auth, no Online Connection Agreement** — with a UAT sandbox at `uat.directory.spineservices.nhs.uk`.
+  - **Coverage is partial — plan a null-fallback.** UPRN is recorded only for organisations **created or address-changed since** the ODS addressing-software migration; older untouched records return no UPRN (verified: `Q69` "Thames Valley Area Team" has **no** `UPRN`). It is also absent from legacy CSV products (XML/API only). So UPRN raises the Bronze ceiling to *reachable*, but a fallback (OS Places postcode match, or emit a UPRN-less Location) is still needed for the unmatched tail.
+  - **Which NHS API:** the strategic surface is the newer **Organisation Data Terminology – FHIR API** (positioned as the ODS "single source of truth", set to supersede the ORD API); the ORD API is under review for deprecation. Confirm the FHIR resource actually projects the Address `uprn` before committing to it — the ORD API is proven to today.
+  - **DoHS ↔ ODS code-class caveat:** our DoHS sandbox `V…`/`OP_…` primary-care contractor codes are synthetic fixture data and **404 in live ODS**; a real ODSCode→ORD join must be validated against production DoHS codes (dentist/pharmacy/optician record classes), not the sandbox.
+  - *Standard-wording note:* the ORUK standard doc defines Bronze only as "minimal required fields populated" and does not *explicitly* name UPRN as the Bronze gate; the C# `OrukLocation.Uprn` is a nullable string. "Bronze hinges on UPRN" is a **strong, defensible inference**, not a spec-stated rule — but shipping UPRN-less Locations still risks rejection by strict validators.
+- **USRN** — optional; **not** in the ODS Address entity (which carries only address lines/town/county/country/postcode/uprn); derive from OS AddressBase or omit.
 - **ONS `ServiceArea`** — NHS has **no catchment concept**. You *could* derive the containing LAD/LSOA/MSOA from postcode via ONSPD/NSPL, but containing area ≠ served area — a semantic trap. **Recommend: out of scope; do not promise ONS geography to consumers.**
 - **ODSCode placement** — ORUK `Organization` has **no `external_identifiers` collection** (only `Location` does). So the clean homes for ODSCode are: `Organization.id` (recommended), optionally `Organization.uri` (resolvable ODS link), and/or a `Location.external_identifiers` row (`scheme="ODS"`).
 - **Country / region** — normalise free-text `Country` → ISO alpha-2 `"GB"`; preserve England/Scotland/Wales/NI in `region` to avoid losing the home-nation.
@@ -183,7 +188,7 @@ Relationship legend: **exact** (direct copy) · **partial** (maps, with loss/car
 
 | Tier | Reachable from NHS? | Blocker |
 |---|---|---|
-| **Bronze** | Only **with** external UPRN enrichment + defaulted required Service fields | `Location.uprn` absent from NHS |
+| **Bronze** | **Yes** for ODS-matched records (UPRN via the ODS ORD API) + defaulted required Service fields; needs a fallback for the unmatched tail | `Location.uprn` absent from DoHS *search* API, but sourceable from ODS ORD API (partial coverage) |
 | **Silver** | Only via a *synthesised* org-type taxonomy (no resolvable `term_uri`) | No ESD/ASCS/SNOMED coding in NHS |
 | **Gold** | **No** | Needs schedules + eligibility + cost + regular assurance reviews, none in NHS |
 
@@ -213,14 +218,14 @@ Relationship legend: **exact** (direct copy) · **partial** (maps, with loss/car
 A stateless service that translates each ORUK request into a live NHS `GET`/`POST` call and rewrites the envelope on the fly.
 
 - **Pros:** Always fresh; low storage/ops; fastest to stand up; no data-republishing footprint (lighter licensing surface if data isn't persisted).
-- **Cons:** No place to hold enrichment → **cannot supply UPRN** → cannot reach Bronze; every request pays NHS auth/latency/rate limits; deep pagination fights Azure `$skip` ceiling; `@odata.count` inexactness surfaces directly to consumers; unservable filters must be rejected live.
-- **Choose when:** proof-of-concept / demo, or an explicit **sub-Bronze** "NHS-shaped-as-ORUK" read surface where freshness beats conformance.
+- **Cons:** UPRN now *can* be fetched live from the open ODS ORD API, but that means a **second upstream call per record** (latency/rate-limit cost; a per-ODSCode cache largely mitigates it); no place to hold *other* enrichment (taxonomy crosswalk, merged Service data); every request pays NHS auth/latency; deep pagination fights Azure `$skip` ceiling; `@odata.count` inexactness surfaces directly to consumers; unservable filters must be rejected live.
+- **Choose when:** proof-of-concept / demo, or a lean read surface — Bronze is now *technically* reachable via the extra ODS call, but freshness-over-richness is the honest positioning.
 
 ### Option B — Batch ETL into an ORUK datastore + enrichment
-Scheduled harvest of NHS → transform (fan-out, id synthesis, unit/type conversions) → **enrich (UPRN via OS, optional taxonomy crosswalk)** → persist as native ORUK entities → serve standard ORUK REST from the store.
+Scheduled harvest of NHS → transform (fan-out, id synthesis, unit/type conversions) → **enrich (UPRN via the ODS ORD API keyed on ODSCode; OS Places fallback for the unmatched tail; optional taxonomy crosswalk)** → persist as native ORUK entities → serve standard ORUK REST from the store.
 
-- **Pros:** The **only path to Bronze** (UPRN enrichment has somewhere to live); exact pagination/counts; clean per-entity routes; stable synthesised ids managed centrally; deterministic, testable converters; extension namespace for NHS-only richness.
-- **Cons:** Staleness between refreshes; storage + pipeline ops; republishing persisted NHS data squarely engages the **Online Connection Agreement** and OS redistribution terms; enrichment cost/maintenance.
+- **Pros:** The **cleanest path to Bronze** (UPRN join + fallback have somewhere to live and cache); exact pagination/counts; clean per-entity routes; stable synthesised ids managed centrally; deterministic, testable converters; extension namespace for NHS-only richness.
+- **Cons:** Staleness between refreshes; storage + pipeline ops; republishing persisted NHS data squarely engages the **DoHS Online Connection Agreement** (the ODS ORD API itself is open-access) and any residual OS redistribution terms on UPRN; enrichment cost/maintenance.
 - **Choose when:** the goal is a **genuinely conformant, queryable ORUK API** — the realistic target for this initiative.
 
 ### Option C — Hybrid (recommended)
@@ -238,7 +243,7 @@ NHS DoHS supplies the **Organisation/Location/geolocation skeleton** via batch E
 ## 9. Key decisions & open questions for the planning session
 
 1. **Conformance target** — Ship sub-Bronze (honest "NHS-as-ORUK") or commit to Bronze (requires UPRN enrichment)? This gates everything below.
-2. **UPRN sourcing** — OS Places API vs AddressBase Premium? Budget, licence, and **redistribution terms** for an open ORUK API. Define the **fallback policy for unresolved UPRNs** (multi-UPRN postcodes, PO boxes): omit the Location, or emit a UPRN-less (non-conformant) Location?
+2. **UPRN sourcing** — **primary source is now the ODS ORD/FHIR API** (`ODSCode → GeoLoc.Location.UPRN`, open-access, authoritative). Decide: ORD API (proven today, deprecation-review) vs Organisation Data Terminology FHIR API (strategic, confirm it emits `uprn`); refresh cadence for the UPRN join; and the **fallback for the unmatched tail** (records ODS hasn't UPRN-stamped, or DoHS codes absent from ODS) — OS Places postcode match, or emit a UPRN-less (non-conformant) Location? Confirm onward-redistribution terms for ODS-sourced UPRN in an open ORUK API.
 3. **Service granularity** — `1 org → 1 Service` (honest to NHS granularity) vs **explode `Services[]` into N Services** (more ORUK-shaped, but each carries only `name`)? This cascades into `ServiceAtLocation` cardinality and every consumer query.
 4. **Identity strategy** — Deterministic id convention (UUIDv5 over `ODSCode` / `ODSCode+serviceName`) frozen as a **public contract**; how ids survive NHS refreshes and service-name edits.
 5. **Enrichment sources** — For a useful feed (Option C), which ORUK/LA feeds fill `description`/`eligibility`/`cost`/`languages`/`schedules`? Entity-matching and provenance approach.
@@ -254,7 +259,7 @@ NHS DoHS supplies the **Organisation/Location/geolocation skeleton** via batch E
 
 ## 10. Risks & unknowns
 
-- **Bronze unreachable from NHS alone.** Mandatory `Location.uprn` is absent; per-service required fields are synthetic. An unenriched feed fails strict validation.
+- **Bronze reachable but not free.** The original "no UPRN in NHS" blocker is **resolved** — ODS holds UPRN, joinable by ODSCode via the open ORD API. Residual risk is **partial coverage** (ODS UPRN-stamps only new/changed records; some return null) and the DoHS-code-class question, so an unenriched or unmatched record still fails strict validation. Per-service required fields remain synthetic.
 - **Fabricated entities imply precision NHS never had.** N `Service` records per org, all sharing one location and one org-level schedule/status, suggest per-service hours/eligibility/address the source never asserted (false precision). Deriving `Service.status` from org-level `OrganisationStatus` (wrong granularity, different value set) can mislabel every service and mis-signal open/closed to referral tools.
 - **Silently hollow feed.** ORUK clients expect populated eligibility/cost/languages/schedules; an NHS-backed API returns them empty, degrading the very query use-cases (accessibility, by-language, schedule) ORUK consumers rely on — and empty Services may read as *data-quality failures* rather than a source limitation.
 - **Silent loss of NHS's differentiator.** The `Metric` quality block, `AcceptingPatients`, EPS flag are dropped by ORUK consumers unless carried as ignored extensions.
@@ -262,5 +267,5 @@ NHS DoHS supplies the **Organisation/Location/geolocation skeleton** via batch E
 - **UPRN mismatch = referral-safety risk.** Address-match errors assign the wrong authoritative property id; enrichment coverage will be imperfect.
 - **Pagination/count inexactness.** `@odata.count` is documented approximate; Azure `$skip` ceiling + `@odata.next` misalign with ORUK page numbers → wrong counts, incomplete or duplicated deep results.
 - **Taxonomy trust risk.** A feed richer at the taxonomy layer than ESD-aligned publishers but lacking resolvable `term_uri` can create a false impression of interoperability.
-- **Licensing unknowns.** Whether the Online Connection Agreement permits open ORUK re-publication, and whether OS UPRN redistribution terms allow it, are **open governance questions** that can block the whole effort.
+- **Licensing unknowns.** Whether the **DoHS** Online Connection Agreement permits open ORUK re-publication (the **ODS ORD API is open-access**, so the UPRN source itself is unencumbered), and whether onward redistribution of ODS-sourced UPRN carries residual OS terms, are **open governance questions** that can block the whole effort.
 - **Bespoke extension effort may be wasted.** Non-standard `Attribute`/extension link-types for `IsEpsEnabled`/`AcceptingPatients`/`Trusts` fall outside ORUK codelists and may be ignored or flagged by validators.

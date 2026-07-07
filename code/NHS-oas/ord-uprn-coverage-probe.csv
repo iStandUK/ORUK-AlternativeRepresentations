@@ -1,0 +1,8 @@
+ODSCode,orgRecordClass,UPRN,Postcode,Notes
+RBQ,RC1,38150603,L14 3PE,Liverpool Heart and Chest NHS FT (trust)
+A81001,RC1,100110780253,TS18 1HU,GP practice
+RX2,RC1,200004018207,BN13 3EP,trust
+RBQ07,RC2,40074525,L33 1XT,SITE (child of RBQ) — has own UPRN
+QMJ,RC1,5170230,N1C 4AG,STP (a DoHS ParentOrganisation)
+Q69,RC1,,OX4 2LH,STP — NO UPRN (uncovered record)
+V002072,,,,"DoHS sandbox dentist code — 404, not in live ODS"
