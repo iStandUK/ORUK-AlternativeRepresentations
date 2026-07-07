@@ -136,6 +136,53 @@ public class OrukToSchemaOrgTransformerTests
         Assert.Equal("https://test.example.org/locations/loc-42", place.Id);
     }
 
+    [Fact]
+    public void Transform_ServiceLocation_IsAtIdReference()
+    {
+        var service = MinimalService();
+        service.ServiceAtLocations.Add(new OrukServiceAtLocation
+        {
+            Id = "sal-1",
+            Location = new OrukLocation { Id = "loc-42", Name = "Loc" }
+        });
+
+        var result = _sut.Transform(service, _opts);
+        var node = result.Document.Graph.OfType<SchemaOrgGovernmentService>().Single();
+
+        Assert.NotNull(node.Location);
+        var reference = Assert.IsType<Dictionary<string, string>>(Assert.Single(node.Location));
+        Assert.Equal("https://test.example.org/locations/loc-42", reference["@id"]);
+        // Must NOT use the invalid {type,id} shape.
+        Assert.False(reference.ContainsKey("type"));
+        Assert.False(reference.ContainsKey("id"));
+    }
+
+    [Fact]
+    public void Transform_ServiceLocation_SerialisesAsAtIdReference()
+    {
+        var service = MinimalService();
+        service.ServiceAtLocations.Add(new OrukServiceAtLocation
+        {
+            Id = "sal-1",
+            Location = new OrukLocation { Id = "loc-42", Name = "Loc" }
+        });
+
+        var result = _sut.Transform(service, _opts);
+        var json = JsonSerializer.Serialize(result.Document, SchemaOrgSerializerOptions.Default);
+        using var root = JsonDocument.Parse(json);
+
+        var node = root.RootElement.GetProperty("@graph")
+            .EnumerateArray()
+            .First(n => n.GetProperty("@type").GetString() == "GovernmentService");
+        var reference = node.GetProperty("location")[0];
+
+        // Proper JSON-LD node reference: {"@id":"..."} — not {"type":"@id","id":"..."}.
+        Assert.Equal("https://test.example.org/locations/loc-42",
+            reference.GetProperty("@id").GetString());
+        Assert.False(reference.TryGetProperty("type", out _));
+        Assert.False(reference.TryGetProperty("id", out _));
+    }
+
     // ── VODIM: Valid classifications ──────────────────────────────────────────────
 
     [Fact]
