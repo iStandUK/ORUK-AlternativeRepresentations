@@ -481,13 +481,10 @@ public sealed partial class OrukToSchemaOrgTransformer : IOrukToSchemaOrgTransfo
             geoClass, $"({location.Latitude},{location.Longitude})",
             geo is not null ? $"({geo.Latitude},{geo.Longitude})" : null, geoNote);
 
-        // uprn → identifier PropertyValue
-        var (uprnClass, uprnNote) = string.IsNullOrWhiteSpace(location.Uprn)
-            ? (VodimClassification.Missing, null)
-            : (VodimClassification.Valid, (string?)null);
-        Record(report, "location.uprn", "Place.identifier[UPRN]",
-            uprnClass, location.Uprn,
-            location.Uprn is not null ? location.Uprn : null, uprnNote);
+        // uprn → Place.identifier[UPRN]
+        // Sourced from either external_identifiers[scheme=UPRN] or the scalar location.uprn;
+        // MapUprnIdentifier reconciles the two sources and records VODIM for both source paths.
+        var identifier = MapUprnIdentifier(location, report);
 
         // usrn → additionalProperty[usrn]
         Record(report, "location.usrn", "Place.additionalProperty[usrn]",
@@ -505,12 +502,6 @@ public sealed partial class OrukToSchemaOrgTransformer : IOrukToSchemaOrgTransfo
 
         // accessibility → amenityFeature
         var amenityFeatures = MapAccessibility(location.Accessibility, report);
-
-        // external identifiers
-        var (extIdClass, extIdNote, extIdentifier) =
-            MapExternalIdentifiers(location.ExternalIdentifiers, report);
-        Record(report, "location.external_identifiers", "Place.identifier",
-            extIdClass, null, extIdentifier?.Value?.ToString(), extIdNote);
 
         // phones
         var phones = location.Phones
@@ -545,7 +536,7 @@ public sealed partial class OrukToSchemaOrgTransformer : IOrukToSchemaOrgTransfo
             Telephone = telephone,
             AmenityFeature = amenityFeatures.Count > 0 ? amenityFeatures : null,
             OpeningHoursSpecification = locSchedules.Count > 0 ? locSchedules : null,
-            Identifier = extIdentifier,
+            Identifier = identifier,
             AdditionalProperty = additionalProps.Count > 0 ? additionalProps : null,
         };
     }
@@ -1371,26 +1362,84 @@ public sealed partial class OrukToSchemaOrgTransformer : IOrukToSchemaOrgTransfo
         return result;
     }
 
-    // ── ExternalIdentifiers → identifier ─────────────────────────────────────────
+    // ── UPRN → Place.identifier ──────────────────────────────────────────────────
 
-    private static (VodimClassification, string?, SchemaOrgPropertyValue?) MapExternalIdentifiers(
-        ICollection<OrukExternalIdentifier> ids, TransformationReport report)
+    /// <summary>
+    /// Resolves the single UPRN <c>Place.identifier</c> from the two possible ORUK sources —
+    /// the structured <c>external_identifiers[scheme=UPRN]</c> entry and the scalar
+    /// <c>location.uprn</c> field — recording an accurate VODIM entry for <em>each</em>
+    /// source path so that neither over-reports what actually reached the output.
+    ///
+    /// <para>
+    /// <b>Design decision — single identifier slot.</b>
+    /// <see cref="SchemaOrgThing.Identifier"/> is a single <see cref="SchemaOrgPropertyValue"/>.
+    /// Both sources here describe the <em>same</em> scheme (UPRN), so they compete for the same
+    /// slot rather than needing to coexist; a list (or an <c>additionalProperty</c> overflow) is
+    /// therefore unnecessary. When both sources carry a value the structured
+    /// <c>external_identifiers[UPRN]</c> entry wins and the scalar is recorded as
+    /// <see cref="VodimClassification.Other"/> (present but superseded, no mapped value) — mirroring
+    /// how <c>interpretation_services</c> is reported when superseded by the structured
+    /// <c>languages</c> collection. Whichever source is actually emitted is the only one classified
+    /// <see cref="VodimClassification.Valid"/>, so VODIM never double-counts one emitted identifier.
+    /// </para>
+    /// </summary>
+    private static SchemaOrgPropertyValue? MapUprnIdentifier(
+        OrukLocation location, TransformationReport report)
     {
-        var uprn = ids.FirstOrDefault(x =>
-            string.Equals(x.IdentifierScheme, "UPRN", StringComparison.OrdinalIgnoreCase));
+        const string target = "Place.identifier[UPRN]";
 
-        if (uprn?.Identifier is not null)
+        var externalUprn = location.ExternalIdentifiers.FirstOrDefault(x =>
+            string.Equals(x.IdentifierScheme, "UPRN", StringComparison.OrdinalIgnoreCase)
+            && !string.IsNullOrWhiteSpace(x.Identifier));
+
+        var scalarUprn = string.IsNullOrWhiteSpace(location.Uprn) ? null : location.Uprn.Trim();
+
+        // Preference order: external_identifiers[UPRN] > scalar location.uprn.
+        if (externalUprn is not null)
         {
-            return (VodimClassification.Valid, null,
-                new SchemaOrgPropertyValue
-                {
-                    Name = "UPRN",
-                    Value = uprn.Identifier,
-                    PropertyId = "UPRN",
-                });
+            var value = externalUprn.Identifier!.Trim();
+
+            // external_identifiers is the emitted source → Valid.
+            Record(report, "location.external_identifiers", target,
+                VodimClassification.Valid, value, value);
+
+            // Scalar is either absent (Missing) or present-but-superseded (Other, not emitted).
+            if (scalarUprn is null)
+                Record(report, "location.uprn", target, VodimClassification.Missing);
+            else
+                Record(report, "location.uprn", target,
+                    VodimClassification.Other, location.Uprn, null,
+                    "Superseded by external_identifiers[UPRN]; value not used in output.");
+
+            return new SchemaOrgPropertyValue
+            {
+                Name = "UPRN",
+                Value = value,
+                PropertyId = "UPRN",
+            };
         }
 
-        return (VodimClassification.Missing, "No UPRN external identifier found.", null);
+        if (scalarUprn is not null)
+        {
+            // Scalar is the emitted source → Valid; no structured identifier present.
+            Record(report, "location.uprn", target,
+                VodimClassification.Valid, location.Uprn, scalarUprn);
+            Record(report, "location.external_identifiers", target,
+                VodimClassification.Missing, null, null, "No UPRN external identifier found.");
+
+            return new SchemaOrgPropertyValue
+            {
+                Name = "UPRN",
+                Value = scalarUprn,
+                PropertyId = "UPRN",
+            };
+        }
+
+        // Neither source carries a UPRN — nothing emitted.
+        Record(report, "location.uprn", target, VodimClassification.Missing);
+        Record(report, "location.external_identifiers", target,
+            VodimClassification.Missing, null, null, "No UPRN external identifier found.");
+        return null;
     }
 
     // ── AdditionalProperty builders ───────────────────────────────────────────────
