@@ -77,7 +77,8 @@ The ORUK `Service` entity maps to `schema:GovernmentService` for government or p
 | `location_type` | `additionalProperty` | Name: `locationType`. |
 | `accessibility` | `amenityFeature` | Map each accessibility feature to `LocationFeatureSpecification`. |
 | `url` | `url` | Venue URL if available. |
-| `external_identifier` (UPRN) | `identifier` | `PropertyValue` with `propertyID: "UPRN"`. |
+| `external_identifier` (UPRN) | `identifier` | `PropertyValue` with `propertyID: "UPRN"`. Preferred UPRN source. |
+| `uprn` (scalar) | `identifier` | `PropertyValue` with `propertyID: "UPRN"`, value trimmed. Fallback UPRN source used only when no `external_identifier` with scheme `UPRN` is present; if both exist the structured `external_identifier` wins and the scalar is recorded (VODIM) as `Other`/superseded. A single `identifier` slot holds the UPRN — both sources describe the same scheme, so no list is required. |
 
 ---
 
@@ -221,9 +222,14 @@ These ORUK fields do not have direct Schema.org equivalents.  They should be inc
 | `service.assured_date` | `assuredDate` |
 | `service.assured_by` | `assuredBy` |
 | `organization.legal_status` | `legalStatus` |
-| `location.uprn` | `uprn` |
 | `location.usrn` | `usrn` |
 | `location.location_type` | `locationType` |
+
+> **Note — `location.uprn`:** UPRN is *not* emitted as an `additionalProperty`. It has a direct
+> Schema.org home as `Place.identifier` (a `PropertyValue` with `propertyID: "UPRN"`); see § 3.
+> The scalar `location.uprn` field feeds that same `identifier` slot as a fallback for the
+> structured `external_identifier[UPRN]`. Emitting it as an `additionalProperty` as well would
+> duplicate the value, so it is deliberately excluded here.
 
 ---
 

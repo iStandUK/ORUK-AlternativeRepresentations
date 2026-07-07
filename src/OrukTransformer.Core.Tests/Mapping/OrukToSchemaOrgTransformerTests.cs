@@ -1055,6 +1055,171 @@ public class OrukToSchemaOrgTransformerTests
             string.Join("; ", invalids.Select(r => r.SourcePath)));
     }
 
+    // ── UPRN → Place.identifier ───────────────────────────────────────────────────
+
+    private static TransformationResult TransformLocation(OrukLocation location)
+    {
+        var service = MinimalService();
+        service.ServiceAtLocations.Add(new OrukServiceAtLocation { Id = "sal-1", Location = location });
+        return _sut.Transform(service, _opts);
+    }
+
+    private static SchemaOrgPlace SinglePlace(TransformationResult result) =>
+        result.Document.Graph.OfType<SchemaOrgPlace>().Single();
+
+    [Fact]
+    public void Transform_ScalarUprnOnly_EmittedAsIdentifier()
+    {
+        // A feed that carries only the scalar location.uprn (no external_identifiers[UPRN])
+        // must still emit the UPRN as Place.identifier — previously it was silently dropped.
+        var result = TransformLocation(new OrukLocation { Id = "loc-1", Uprn = "100012345678" });
+        var place = SinglePlace(result);
+
+        Assert.NotNull(place.Identifier);
+        Assert.Equal("UPRN", place.Identifier!.Name);
+        Assert.Equal("UPRN", place.Identifier.PropertyId);
+        Assert.Equal("100012345678", place.Identifier.Value);
+    }
+
+    [Fact]
+    public void Transform_ScalarUprnOnly_RecordsScalarValid_ExternalMissing()
+    {
+        var result = TransformLocation(new OrukLocation { Id = "loc-1", Uprn = "100012345678" });
+
+        var scalarRec = FindRecord(result.Report, "location.uprn");
+        var externalRec = FindRecord(result.Report, "location.external_identifiers");
+
+        Assert.Equal(VodimClassification.Valid, scalarRec?.Classification);
+        Assert.Equal("100012345678", scalarRec?.MappedValue);
+        Assert.Equal(VodimClassification.Missing, externalRec?.Classification);
+    }
+
+    [Fact]
+    public void Transform_ScalarUprnWithWhitespace_TrimmedInOutput()
+    {
+        var result = TransformLocation(new OrukLocation { Id = "loc-1", Uprn = "  100012345678  " });
+        var place = SinglePlace(result);
+
+        Assert.Equal("100012345678", place.Identifier!.Value);
+    }
+
+    [Fact]
+    public void Transform_ExternalUprnOnly_EmittedAsIdentifier()
+    {
+        var location = new OrukLocation { Id = "loc-1" };
+        location.ExternalIdentifiers.Add(new OrukExternalIdentifier
+        {
+            Id = "eid-1",
+            IdentifierScheme = "UPRN",
+            Identifier = "200099887766",
+        });
+        var result = TransformLocation(location);
+        var place = SinglePlace(result);
+
+        Assert.NotNull(place.Identifier);
+        Assert.Equal("UPRN", place.Identifier!.PropertyId);
+        Assert.Equal("200099887766", place.Identifier.Value);
+    }
+
+    [Fact]
+    public void Transform_ExternalUprnOnly_RecordsExternalValid_ScalarMissing()
+    {
+        var location = new OrukLocation { Id = "loc-1" };
+        location.ExternalIdentifiers.Add(new OrukExternalIdentifier
+        {
+            Id = "eid-1",
+            IdentifierScheme = "UPRN",
+            Identifier = "200099887766",
+        });
+        var result = TransformLocation(location);
+
+        var scalarRec = FindRecord(result.Report, "location.uprn");
+        var externalRec = FindRecord(result.Report, "location.external_identifiers");
+
+        Assert.Equal(VodimClassification.Missing, scalarRec?.Classification);
+        Assert.Equal(VodimClassification.Valid, externalRec?.Classification);
+        Assert.Equal("200099887766", externalRec?.MappedValue);
+    }
+
+    [Fact]
+    public void Transform_BothUprnSources_ExternalWins_ScalarRecordedSuperseded()
+    {
+        // When both sources are present the structured external_identifier[UPRN] wins,
+        // and VODIM must not double-count: the scalar is Other (present, not emitted).
+        var location = new OrukLocation { Id = "loc-1", Uprn = "111111111111" };
+        location.ExternalIdentifiers.Add(new OrukExternalIdentifier
+        {
+            Id = "eid-1",
+            IdentifierScheme = "UPRN",
+            Identifier = "999999999999",
+        });
+        var result = TransformLocation(location);
+        var place = SinglePlace(result);
+
+        // External value is emitted, scalar value is not.
+        Assert.Equal("999999999999", place.Identifier!.Value);
+
+        var scalarRec = FindRecord(result.Report, "location.uprn");
+        var externalRec = FindRecord(result.Report, "location.external_identifiers");
+
+        Assert.Equal(VodimClassification.Valid, externalRec?.Classification);
+        Assert.Equal("999999999999", externalRec?.MappedValue);
+
+        Assert.Equal(VodimClassification.Other, scalarRec?.Classification);
+        Assert.Null(scalarRec?.MappedValue);
+        Assert.Contains("Superseded", scalarRec?.Note ?? string.Empty, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void Transform_NoUprnAnywhere_NoIdentifier_BothRecordedMissing()
+    {
+        var result = TransformLocation(new OrukLocation { Id = "loc-1" });
+        var place = SinglePlace(result);
+
+        Assert.Null(place.Identifier);
+
+        var scalarRec = FindRecord(result.Report, "location.uprn");
+        var externalRec = FindRecord(result.Report, "location.external_identifiers");
+
+        Assert.Equal(VodimClassification.Missing, scalarRec?.Classification);
+        Assert.Equal(VodimClassification.Missing, externalRec?.Classification);
+    }
+
+    [Fact]
+    public void Transform_UprnScalar_NotDuplicatedInAdditionalProperty()
+    {
+        // UPRN belongs in Place.identifier, not additionalProperty (mapping.md §10).
+        var result = TransformLocation(new OrukLocation { Id = "loc-1", Uprn = "100012345678" });
+        var place = SinglePlace(result);
+
+        var uprnProp = place.AdditionalProperty?
+            .FirstOrDefault(p => p.Name.Contains("uprn", StringComparison.OrdinalIgnoreCase));
+        Assert.Null(uprnProp);
+    }
+
+    [Fact]
+    public void Transform_ExactlyOneUprnTargetPerSourcePath()
+    {
+        // Reconciliation guarantee: each source path yields exactly one Place.identifier[UPRN]
+        // record, so coverage of the identifier target is never double-counted.
+        var location = new OrukLocation { Id = "loc-1", Uprn = "111111111111" };
+        location.ExternalIdentifiers.Add(new OrukExternalIdentifier
+        {
+            Id = "eid-1",
+            IdentifierScheme = "UPRN",
+            Identifier = "999999999999",
+        });
+        var result = TransformLocation(location);
+
+        Assert.Single(FindRecords(result.Report, "location.uprn"));
+        Assert.Single(FindRecords(result.Report, "location.external_identifiers"));
+
+        var emittedIdentifierRecords = result.Report.Records
+            .Count(r => r.TargetPath == "Place.identifier[UPRN]"
+                && r.Classification == VodimClassification.Valid);
+        Assert.Equal(1, emittedIdentifierRecords);
+    }
+
     [Fact]
     public void Transform_BristolFixture_AdditionalPropertyIncludesOrukStatus()
     {
