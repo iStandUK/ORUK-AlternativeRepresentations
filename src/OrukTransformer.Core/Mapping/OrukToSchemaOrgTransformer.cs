@@ -260,7 +260,8 @@ public sealed partial class OrukToSchemaOrgTransformer : IOrukToSchemaOrgTransfo
         // locations (via service_at_locations)
         var locationRefs = service.ServiceAtLocations
             .Where(sal => sal.Location is not null)
-            .Select(sal => (object)new { type = "@id", id = options.LocationUri(sal.Location!.Id) })
+            .Select(sal => (object)new Dictionary<string, string>
+                { ["@id"] = options.LocationUri(sal.Location!.Id) })
             .ToList();
         RecordCollectionMapping(report,
             "service.service_at_locations", "GovernmentService.location",
