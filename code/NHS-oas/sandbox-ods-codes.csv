@@ -1,0 +1,51 @@
+ODSCode,OrganisationName,OrganisationType,OrganisationSubType,ParentODSCode,ParentName,City,Postcode,ServicesCount
+V002072,Chantry House Dental Practice,Dentist,,QNX,Sussex and East Surrey STP,Bognor Regis,PO22 0EE,0
+V017953,Penzance Dental,Dentist,,QT6,Cornwall and the Isles of Scilly Health & Social Care Partnership (STP),Penzance,TR18 2LG,0
+OP_MK158PL_46766,Home Eyetest Ltd,Optician,,Q69,Thames Valley Area Team,Milton Keynes,MK15 8PL,0
+RBQ07,The Tower Hill Primary Resource Centre,Clinic,NHS Sector,RBQ,Liverpool Heart and Chest NHS Foundation Trust,Liverpool,L33 1XT,0
+OP_G328NB_46955,Vision Call South East,Optician,,Q69,Thames Valley Area Team,"Cambuslang, Glasgow",G32 8NB,0
+V007182,Newport Dental Practice,Dentist,,QOC,Shropshire and Telford and Wrekin STP,Newport,TF10 7LT,0
+V007229,Station House Dental Practice,Dentist,,QOC,Shropshire and Telford and Wrekin STP,Shropshire,TF2 6AG,1
+V007250,"Bupa Dental Care, Wellington",Dentist,,QOC,Shropshire and Telford and Wrekin STP,Shropshire,TF1 1DG,2
+V028008,Pontesbury Dental Practice,Dentist,,QOC,Shropshire and Telford and Wrekin STP,Shrewsbury,SY5 0QJ,0
+V006628,D Chilcott Dental Practice,Dentist,,QOC,Shropshire and Telford and Wrekin STP,Shropshire,TF9 3DD,0
+V006055,"mydentist, Station Road, Hednesford",Dentist,,QNC,Staffordhsire and Stoke on Trent STP,Cannock,WS12 4DH,0
+V006951_1,Dr. Gilani - Dental Surgery,Dentist,,QUA,The Black Country and West Birmingham STP,Walsall,WS1 3AB,1
+V006968,First Dental,Dentist,,QUA,The Black Country and West Birmingham STP,Walsall,WS3 2DG,1
+V001522,Key Dental Practice,Dentist,,QUA,The Black Country and West Birmingham STP,Willenhall,WV12 5EA,0
+V006988,Aldridge Dental Practice,Dentist,,QUA,The Black Country and West Birmingham STP,Walsall,WS9 8AJ,1
+V006076,Prestige Dental Care,Dentist,,QWU,Coventry and Warwickshire STP,Bedworth,CV12 8NA,1
+V006366,Brij Dhody Dental Practice,Dentist,,QUA,The Black Country and West Birmingham STP,W Midlands,WV3 8DH,0
+V006390,Sean Robert Lowe,Dentist,,QUA,The Black Country and West Birmingham STP,,WV4 6RA,2
+V007325,Orthodontics For You,Dentist,,QGH,Herefordshire and Worcestershire STP,Bromsgrove,B61 8DS,1
+V008962,Evesham Dental Health Team,Dentist,,QGH,Herefordshire and Worcestershire STP,Evesham,WR11 1BG,3
+V008126,Redcliffe Orthodontics,Dentist,,QGH,Herefordshire and Worcestershire STP,Worcester,WR5 2HN,1
+V007841,"Bupa Dental Care, Peterborough Werrington",Dentist,,QUE,Cambridgeshire and Peterbrough STP,Cambs,PE4 6NB,0
+V007845,"mydentist, Fulbridge Road, Peterborough ",Dentist,,QUE,Cambridgeshire and Peterbrough STP,Peterborough,PE1 3LE,1
+RX2D7,Glebelands Centre,Clinic,NHS Sector,RX2,Sussex Partnership NHS Foundation Trust,Shoreham-By-Sea,BN43 6GA,2
+V002804,Great Shelford Dental Surgery,Dentist,,QUE,Cambridgeshire and Peterbrough STP,Cambs,CB22 5LZ,0
+V044032,Linton Dental Practice,Dentist,,QUE,Cambridgeshire and Peterbrough STP,Cambridge,CB21 4HS,0
+V007610,"mydentist, The Broadway, St Ives ",Dentist,,QUE,Cambridgeshire and Peterbrough STP,St. Ives,PE27 5BX,0
+V005579,Upwell Road Dental Centre,Dentist,,QUE,Cambridgeshire and Peterbrough STP,Cambridgeshire,PE15 0DA,1
+V005559,"Bupa Dental Care, Wisbech",Dentist,,QUE,Cambridgeshire and Peterbrough STP,Cambs,PE13 1HQ,0
+RV5E1,Young Offenders Service (Lewisham),Clinic,NHS Sector,RV5,South London and Maudsley NHS Foundation Trust,London,SE13 6BJ,1
+V001143,Wootton Road Dental Clinic,Dentist,,QMM,Norfolk and Waveney Health & Care Partnership (STP),Kings Lynn,PE30 4DJ,0
+V000809,"Bupa Dental Care, Gorleston",Dentist,,QMM,Norfolk and Waveney Health & Care Partnership (STP),Gorleston,NR31 6RQ,0
+V004971,Broadway Dental Surgery,Dentist,,QMJ,North London Partners in Health & Care (STP),Edgware,HA8 0AS,1
+V009284,Dental Arts Studio,Dentist,,QMJ,North London Partners in Health & Care (STP),,NW4 3UX,0
+V004310,Dental Arts Studio,Dentist,,QMJ,North London Partners in Health & Care (STP),Middlesex,EN2 6EB,0
+V001578,Royston Dental Suite,Dentist,,QM7,Hertfordshire and West Essex STP,Herts,SG8 9AA,0
+V008006,Woodhall Farm Dental Surgery,Dentist,,QM7,Hertfordshire and West Essex STP,Herts,HP2 7QD,0
+V008602,Hemel Smile Studios,Dentist,,QM7,Hertfordshire and West Essex STP,Herts,HP3 8EW,0
+V007939,The Leys Road Dental Practice,Dentist,,QM7,Hertfordshire and West Essex STP,Hemel Hempstead,HP3 9LX,2
+V006380,Hydean Dental Practice,Dentist,,QM7,Hertfordshire and West Essex STP,STEVENAGE,SG2 9XU,2
+V008757,Watford Dental Practice,Dentist,,QM7,Hertfordshire and West Essex STP,WATFORD,WD24 5BH,1
+V006936,Harley House,Dentist,,QM7,Hertfordshire and West Essex STP,Herts,WD6 5BT,0
+V006977,Kohn Mr EL & Associate,Dentist,,QM7,Hertfordshire and West Essex STP,Herts,WD7 7NQ,0
+V012836,Village Dental Practice,Dentist,,QM7,Hertfordshire and West Essex STP,Stevenage,SG1 1DH,0
+V007923,O'Grady Mr JC & Rogers Miss CEA,Dentist,,QM7,Hertfordshire and West Essex STP,Herts,HP4 2AB,0
+V001414,Peachdent Practice,Dentist,,QM7,Hertfordshire and West Essex STP,Hertfordshire,EN8 9DF,1
+V008254,Deansgate Dental,Dentist,,QOP,Greater Manchester Health and Social Care Partnership (STP),Manchester,M26 2SH,1
+V013926,Genix Healthcare Alnwick,Dentist,,QHM,Cumbria and North East STP,Alnwick,NE66 2GD,0
+V009568,Synergy Dental Clinic,Dentist,,QOP,Greater Manchester Health and Social Care Partnership (STP),Bolton,BL1 8DT,2
+V012289,Modwena Orthodontics,Dentist,,QNC,Staffordhsire and Stoke on Trent STP,Staffs,DE14 1HA,1
