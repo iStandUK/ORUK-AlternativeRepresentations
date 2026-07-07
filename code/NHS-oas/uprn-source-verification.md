@@ -33,12 +33,24 @@ Pulled from the open ORD API by primary role (`RO110` dental, `RO182` pharmacy,
 `RO167` optical) then looked up individually — see
 [`ord-uprn-coverage-probe.csv`](ord-uprn-coverage-probe.csv):
 
-- **21 codes probed, 18 with UPRN.** Among *resolvable* records, only 2 lacked one:
-  `Q69` (old area team) and `A1L4S` (one optician).
+- **21 codes probed, 19 with UPRN.** Only 2 lacked one: `Q69` (old area team)
+  and `A1L4S` (one optician).
 - Real dentists (`V00003`…), pharmacies (`FA002`…) and opticians (`A0C1W`…) all
   returned UPRNs (e.g. `V00003 → 100062475349`, `FA002 → 100012787936`).
 - Sites are modelled as `orgRecordClass RC2` records with their **own** UPRN
-  (`RBQ07 → 40074525`).
+  (`RBQ07 → 40074525`), linked to their parent org through an ODS **relationship
+  record** (`RBQ07` → `RBQ` via `RE6`), **not** through the code string.
+
+## Note on ODS code format (codes are opaque)
+
+ODS codes must be treated as **opaque identifiers**. Legacy codes vary in shape
+(3-char organisations like `RBQ`; historically-suffixed site codes like `RBQ07`;
+`F…` dispensing/pharmacy codes; `V…` dental codes). Newer allocations are **5-char
+`ANANA`** (alpha-numeric-alpha-numeric-alpha, e.g. `A0C1W`, `C4B2A`, `X6R3V`,
+`H8I8M`) — a scheme adopted to expand the available code space. **Do not parse a
+code to infer type or an organisation↔site hierarchy** (the historic "site = parent
+code + suffix" reading no longer generalises); those relationships come from ODS
+**relationship** data (ORD `Rels` / FHIR `OrganizationAffiliation`).
 
 ## Conclusion
 
