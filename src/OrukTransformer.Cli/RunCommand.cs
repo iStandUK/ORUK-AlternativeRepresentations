@@ -1,5 +1,5 @@
 using Microsoft.Extensions.Logging;
-using OrukTransformer.Cli.Fetching;
+using OrukApiClient;
 using OrukTransformer.Cli.Output;
 using OrukTransformer.Core.Mapping;
 using OrukTransformer.Core.Vodim;
@@ -9,9 +9,9 @@ namespace OrukTransformer.Cli;
 /// <summary>
 /// Orchestrates the full fetch → transform → report pipeline for the CLI.
 /// </summary>
-public sealed class RunCommand
+public sealed class RunCommand : IRunCommand
 {
-    private readonly IOrukFeedPageFetcher _fetcher;
+    private readonly IOrukServiceClient _serviceClient;
     private readonly IOrukToSchemaOrgTransformer _transformer;
     private readonly IJsonLdMerger _merger;
     private readonly IJsonLdWriter _writer;
@@ -20,7 +20,7 @@ public sealed class RunCommand
     private readonly ILogger<RunCommand> _logger;
 
     public RunCommand(
-        IOrukFeedPageFetcher fetcher,
+        IOrukServiceClient serviceClient,
         IOrukToSchemaOrgTransformer transformer,
         IJsonLdMerger merger,
         IJsonLdWriter writer,
@@ -28,7 +28,7 @@ public sealed class RunCommand
         IDataQualityReportWriter dataQualityReportWriter,
         ILogger<RunCommand> logger)
     {
-        _fetcher = fetcher;
+        _serviceClient = serviceClient;
         _transformer = transformer;
         _merger = merger;
         _writer = writer;
@@ -77,9 +77,12 @@ public sealed class RunCommand
                       (orukUrl.IsDefaultPort ? string.Empty : $":{orukUrl.Port}")
         };
 
-        // 1. Fetch
+        // 1. Fetch. The service client accepts either a feed base URL or a /services
+        //    endpoint, auto-detects RPDE (next_url) vs page-number pagination, and
+        //    appends a /services suffix on first-page failure.
         var results = new List<TransformationResult>();
-        await foreach (var service in _fetcher.FetchAsync(orukUrl, maxRecords, cancellationToken))
+        var query = new OrukServiceQuery { MaxRecords = maxRecords };
+        await foreach (var service in _serviceClient.SearchAsync(orukUrl, query, cancellationToken))
         {
             // 2. Transform (one service at a time to keep memory footprint small)
             var result = _transformer.Transform(service, options);

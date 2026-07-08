@@ -1,9 +1,9 @@
 using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
+using OrukApiClient;
 using OrukModels.Models;
 using OrukModels.SchemaOrg;
 using OrukTransformer.Cli;
-using OrukTransformer.Cli.Fetching;
 using OrukTransformer.Cli.Output;
 using OrukTransformer.Core.Mapping;
 using OrukTransformer.Core.Vodim;
@@ -17,14 +17,14 @@ public class RunCommandTests
     [Fact]
     public async Task ExecuteAsync_WhenJsonLdToStdout_DoesNotWriteVodimReport()
     {
-        var fetcher = Substitute.For<IOrukFeedPageFetcher>();
+        var serviceClient = Substitute.For<IOrukServiceClient>();
         var transformer = Substitute.For<IOrukToSchemaOrgTransformer>();
         var merger = Substitute.For<IJsonLdMerger>();
         var writer = Substitute.For<IJsonLdWriter>();
         var reporter = Substitute.For<IVodimReporter>();
         var dataQualityReportWriter = Substitute.For<IDataQualityReportWriter>();
 
-        fetcher.FetchAsync(SourceUrl, 10, Arg.Any<CancellationToken>())
+        serviceClient.SearchAsync(SourceUrl, Arg.Any<OrukServiceQuery>(), Arg.Any<CancellationToken>())
             .Returns(GetServices(new OrukService { Id = "svc-1", Name = "Service 1" }));
 
         transformer.Transform(Arg.Any<OrukService>(), Arg.Any<TransformationOptions>())
@@ -38,7 +38,7 @@ public class RunCommandTests
             .Returns(new SchemaOrgDocument());
 
         var sut = new RunCommand(
-            fetcher,
+            serviceClient,
             transformer,
             merger,
             writer,
@@ -65,14 +65,14 @@ public class RunCommandTests
     [Fact]
     public async Task ExecuteAsync_WhenJsonLdToFile_WritesVodimReport()
     {
-        var fetcher = Substitute.For<IOrukFeedPageFetcher>();
+        var serviceClient = Substitute.For<IOrukServiceClient>();
         var transformer = Substitute.For<IOrukToSchemaOrgTransformer>();
         var merger = Substitute.For<IJsonLdMerger>();
         var writer = Substitute.For<IJsonLdWriter>();
         var reporter = Substitute.For<IVodimReporter>();
         var dataQualityReportWriter = Substitute.For<IDataQualityReportWriter>();
 
-        fetcher.FetchAsync(SourceUrl, 10, Arg.Any<CancellationToken>())
+        serviceClient.SearchAsync(SourceUrl, Arg.Any<OrukServiceQuery>(), Arg.Any<CancellationToken>())
             .Returns(GetServices(new OrukService { Id = "svc-1", Name = "Service 1" }));
 
         transformer.Transform(Arg.Any<OrukService>(), Arg.Any<TransformationOptions>())
@@ -86,7 +86,7 @@ public class RunCommandTests
             .Returns(new SchemaOrgDocument());
 
         var sut = new RunCommand(
-            fetcher,
+            serviceClient,
             transformer,
             merger,
             writer,

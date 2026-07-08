@@ -4,9 +4,7 @@
     <Project Path="code/OrukModels/OrukModels.csproj" />
   </Folder>
   <Folder Name="/src/">
-    <Project Path="src/OrukApiClient/OrukApiClient.csproj">
-      <Build Solution="Debug|*" Project="false" />
-    </Project>
+    <Project Path="src/OrukApiClient/OrukApiClient.csproj" />
     <Project Path="src/OrukTransformer.Cli.Tests/OrukTransformer.Cli.Tests.csproj">
       <Build Solution="Debug|*" Project="false" />
     </Project>
