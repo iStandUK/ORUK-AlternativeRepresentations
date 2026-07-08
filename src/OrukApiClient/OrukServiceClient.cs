@@ -135,11 +135,15 @@ public sealed class OrukServiceClient : IOrukServiceClient
             }
             catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or JsonException)
             {
+                // Connectivity/parse failures (dead host, DNS, timeout, non-JSON) are expected
+                // when harvesting many external feeds. Log the reason concisely — the full
+                // exception (with stack trace) is available at debug level for diagnosis.
                 if (firstPage && !triedServicesSuffixFallback)
                 {
-                    _logger.LogWarning(ex,
-                        "First-page request to {Url} failed. Retrying feed {BaseUrl} with '/services' suffix.",
-                        url, feedBaseUrl);
+                    _logger.LogWarning(
+                        "First-page request to {Url} failed ({Reason}). Retrying feed {BaseUrl} with '/services' suffix.",
+                        url, Describe(ex), feedBaseUrl);
+                    _logger.LogDebug(ex, "First-page request failure detail for {Url}.", url);
                     appendServicesPath = true;
                     triedServicesSuffixFallback = true;
                     currentPage = 1;
@@ -149,10 +153,16 @@ public sealed class OrukServiceClient : IOrukServiceClient
                 }
                 if (firstPage)
                 {
-                    _logger.LogError(ex, "Fatal error fetching first page from {Url}. Aborting.", url);
+                    _logger.LogWarning(
+                        "Could not fetch the first page from {Url}: {Reason}. Skipping this feed.",
+                        url, Describe(ex));
+                    _logger.LogDebug(ex, "First-page fetch failure detail for {Url}.", url);
                     yield break;
                 }
-                _logger.LogWarning(ex, "Error fetching page {Page} from {Url}. Skipping.", currentPage, url);
+                _logger.LogWarning(
+                    "Error fetching page {Page} from {Url}: {Reason}. Skipping page.",
+                    currentPage, url, Describe(ex));
+                _logger.LogDebug(ex, "Page {Page} fetch failure detail for {Url}.", currentPage, url);
                 if (rpdeNextUrl is not null) break;
                 currentPage++;
                 continue;
@@ -348,6 +358,21 @@ public sealed class OrukServiceClient : IOrukServiceClient
     {
         var trimmed = body.AsSpan().TrimStart();
         return trimmed.Length > 0 && trimmed[0] == '<';
+    }
+
+    /// <summary>
+    /// Produces a concise, human-readable reason for a fetch failure (e.g. the underlying
+    /// "No such host is known" rather than the outer wrapper), for logging without a stack trace.
+    /// </summary>
+    private static string Describe(Exception ex)
+    {
+        if (ex is TaskCanceledException)
+            return "request timed out";
+
+        var inner = ex;
+        while (inner.InnerException is not null)
+            inner = inner.InnerException;
+        return inner.Message.TrimEnd('.', ' ');
     }
 
     private void LogHttpError(HttpResponseMessage response, int page, Uri url)
