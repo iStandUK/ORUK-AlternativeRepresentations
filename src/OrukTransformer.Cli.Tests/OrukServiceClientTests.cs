@@ -67,6 +67,40 @@ public class OrukServiceClientTests
         Assert.Equal(1, mock.GetMatchCount(servicesRequest));
     }
 
+    [Fact]
+    public async Task SearchAsync_WhenRootReturnsHtml_RecoversViaServicesSuffix()
+    {
+        // A feed whose base URL redirects to an HTML page (e.g. its website) must not
+        // throw; the client should fall back to the /services endpoint and yield results.
+        var feedBaseUrl = new Uri("https://example.org/o/OpenReferralService/v3");
+        var mock = new MockHttpMessageHandler();
+        mock.Fallback.Respond(HttpStatusCode.NotFound);
+
+        var rootRequest = mock
+            .When(HttpMethod.Get, "https://example.org/o/OpenReferralService/v3")
+            .WithQueryString("page", "1")
+            .WithQueryString("per_page", "100")
+            .Respond("text/html", "<!DOCTYPE html><html><body>Not an API</body></html>");
+
+        var servicesRequest = mock
+            .When(HttpMethod.Get, "https://example.org/o/OpenReferralService/v3/services")
+            .WithQueryString("page", "1")
+            .WithQueryString("per_page", "100")
+            .Respond("application/json", MakePage(1, 1, [new OrukService { Id = "svc-3", Name = "Service Three" }]));
+
+        var client = CreateClient(mock.ToHttpClient());
+        var query = new OrukServiceQuery { MaxRecords = 20 };
+
+        var results = new List<OrukService>();
+        await foreach (var service in client.SearchAsync(feedBaseUrl, query))
+            results.Add(service);
+
+        Assert.Single(results);
+        Assert.Equal("svc-3", results[0].Id);
+        Assert.Equal(1, mock.GetMatchCount(rootRequest));
+        Assert.Equal(1, mock.GetMatchCount(servicesRequest));
+    }
+
     private static OrukServiceClient CreateClient(HttpClient httpClient)
     {
         var geocoder = Substitute.For<IPostcodeGeocoder>();

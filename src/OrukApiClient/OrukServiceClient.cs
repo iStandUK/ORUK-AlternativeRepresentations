@@ -305,13 +305,27 @@ public sealed class OrukServiceClient : IOrukServiceClient
 
     private OrukPage<OrukService>? TryDeserialise(string body, int page, Uri url)
     {
+        // A response that begins with '<' is HTML/XML, not JSON — commonly a redirect
+        // landing page, a login/error page, or the feed's website rather than its JSON
+        // API. Report it concisely (no stack trace): the caller recovers by falling back
+        // to the /services endpoint, so this is not a fatal condition.
+        if (LooksLikeMarkup(body))
+        {
+            _logger.LogWarning(
+                "Response for page {Page} from {Url} was not JSON (it looks like HTML/XML) — " +
+                "the endpoint may not be an ORUK JSON API. Falling back to the /services endpoint.",
+                page, url);
+            return null;
+        }
+
         try
         {
             return JsonSerializer.Deserialize<OrukPage<OrukService>>(body);
         }
         catch (JsonException)
         {
-            _logger.LogWarning("Deserialisation failed for page {Page} from {Url}. Retrying case-insensitive.", page, url);
+            // First attempt failed — retry once with case-insensitive property matching
+            // before giving up (some feeds use PascalCase property names).
         }
 
         try
@@ -321,9 +335,19 @@ public sealed class OrukServiceClient : IOrukServiceClient
         }
         catch (JsonException ex)
         {
-            _logger.LogError(ex, "Fallback deserialisation also failed for page {Page} from {Url}.", page, url);
+            // Recoverable: the caller treats a null page as "no results" and may retry
+            // the /services endpoint, so log concisely at warning level without a stack trace.
+            _logger.LogWarning(
+                "Could not parse the response for page {Page} from {Url} as an ORUK page: {Reason}",
+                page, url, ex.Message);
             return null;
         }
+    }
+
+    private static bool LooksLikeMarkup(string body)
+    {
+        var trimmed = body.AsSpan().TrimStart();
+        return trimmed.Length > 0 && trimmed[0] == '<';
     }
 
     private void LogHttpError(HttpResponseMessage response, int page, Uri url)
