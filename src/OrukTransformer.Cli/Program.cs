@@ -1,28 +1,49 @@
 using System.CommandLine;
 using Microsoft.Extensions.Logging;
+using OrukApiClient;
+using OrukApiClient.Internal;
 using OrukTransformer.Cli;
-using OrukTransformer.Cli.Fetching;
+using OrukTransformer.Cli.Feeds;
 using OrukTransformer.Cli.Output;
 using OrukTransformer.Core.Mapping;
 
 // ── Options ──────────────────────────────────────────────────────────────────
 
-var orukUrlOption = new Option<string>("--oruk-url")
+var orukUrlOption = new Option<string?>("--oruk-url")
 {
-    Description = "URL of the ORUK v3 GET /services endpoint.",
-    Required = true
+    Description = "URL of the ORUK v3 GET /services endpoint. " +
+                  "Mutually exclusive with --feeds; supply one or the other.",
+    DefaultValueFactory = _ => null
+};
+
+var feedsOption = new Option<FileInfo?>("--feeds")
+{
+    Description = "Path to a feeds.json file. When supplied, every feed in the file is processed " +
+                  "in batch mode: a JSON-LD document and a data-quality report are written per feed " +
+                  "into the output directory, with file names derived from each feed's name. " +
+                  "Mutually exclusive with --oruk-url.",
+    DefaultValueFactory = _ => null
+};
+
+var outputDirOption = new Option<DirectoryInfo?>("--output-dir")
+{
+    Description = "Directory for generated output files (created if it does not exist). " +
+                  "In batch mode (--feeds) per-feed files are written here. In single mode it is " +
+                  "the base directory for --json-ld and --data-quality-report. " +
+                  "Defaults to the current directory.",
+    DefaultValueFactory = _ => null
 };
 
 var jsonLdOption = new Option<FileInfo?>("--json-ld")
 {
     Description = "File path to write the generated JSON-LD output. " +
-                  "Omit to write to stdout.",
+                  "Omit to write to stdout. Ignored in batch mode (--feeds).",
     DefaultValueFactory = _ => null
 };
 
 var maxRecordsOption = new Option<int>("--max-records")
 {
-    Description = "Maximum number of service records to retrieve. " +
+    Description = "Maximum number of service records to retrieve (per feed). " +
                   "Values less than 1 mean no limit.",
     DefaultValueFactory = _ => 50
 };
@@ -38,7 +59,8 @@ var dataQualityReportOption = new Option<FileInfo?>("--data-quality-report")
 {
     Description = "Write an xHTML5 data-quality report to this file. " +
                   "When omitted the report is not generated. " +
-                  "Supply a path, e.g. --data-quality-report oruk-schema_org.html",
+                  "Supply a path, e.g. --data-quality-report oruk-schema_org.html. " +
+                  "Ignored in batch mode (--feeds), which names reports per feed.",
     DefaultValueFactory = _ => null
 };
 
@@ -74,10 +96,13 @@ var formatOption = new Option<string>("--format")
 // ── Root command ──────────────────────────────────────────────────────────────
 
 var rootCommand = new RootCommand(
-    "Fetches an ORUK v3 service-directory endpoint, transforms the services " +
-    "to Schema.org JSON-LD, and reports VODIM data quality.")
+    "Fetches ORUK v3 service-directory endpoint(s), transforms the services " +
+    "to Schema.org JSON-LD, and reports VODIM data quality. Process a single " +
+    "endpoint with --oruk-url, or every feed in a feeds.json with --feeds.")
 {
     orukUrlOption,
+    feedsOption,
+    outputDirOption,
     jsonLdOption,
     maxRecordsOption,
     verboseOption,
@@ -90,7 +115,9 @@ var rootCommand = new RootCommand(
 
 rootCommand.SetAction(async (ParseResult parseResult, CancellationToken cancellationToken) =>
 {
-    var orukUrlRaw = parseResult.GetValue(orukUrlOption)!;
+    var orukUrlRaw = parseResult.GetValue(orukUrlOption);
+    var feedsFile = parseResult.GetValue(feedsOption);
+    var outputDir = parseResult.GetValue(outputDirOption);
     var jsonLd = parseResult.GetValue(jsonLdOption);
     var maxRecords = parseResult.GetValue(maxRecordsOption);
     var verbose = parseResult.GetValue(verboseOption);
@@ -99,9 +126,93 @@ rootCommand.SetAction(async (ParseResult parseResult, CancellationToken cancella
     var quiet = parseResult.GetValue(quietOption);
     var timeoutSeconds = parseResult.GetValue(timeoutOption);
     var format = parseResult.GetValue(formatOption)!;
-    var writingJsonToStdout = jsonLd is null;
     var logLevelProvided = WasOptionProvided(parseResult, "--log-level");
     var quietProvided = WasOptionProvided(parseResult, "--quiet");
+    var batchMode = feedsFile is not null;
+
+    // ── Mode selection ────────────────────────────────────────────────────────
+
+    if (batchMode && !string.IsNullOrWhiteSpace(orukUrlRaw))
+    {
+        Console.Error.WriteLine(
+            "Error: '--oruk-url' and '--feeds' are mutually exclusive. Supply one or the other.");
+        Environment.Exit(1);
+        return;
+    }
+    if (!batchMode && string.IsNullOrWhiteSpace(orukUrlRaw))
+    {
+        Console.Error.WriteLine("Error: one of '--oruk-url' or '--feeds' is required.");
+        Environment.Exit(1);
+        return;
+    }
+
+    // ── Shared validation: --format ──────────────────────────────────────────
+
+    if (!string.Equals(format, "json-ld", StringComparison.OrdinalIgnoreCase))
+    {
+        Console.Error.WriteLine(
+            $"Error: '--format' value '{format}' is not supported. Only 'json-ld' is currently available.");
+        Environment.Exit(1);
+        return;
+    }
+
+    // ── Batch mode (--feeds) ──────────────────────────────────────────────────
+
+    if (batchMode)
+    {
+        if (jsonLd is not null || dataQualityReport is not null)
+        {
+            Console.Error.WriteLine(
+                "Error: '--json-ld' and '--data-quality-report' cannot be combined with '--feeds'. " +
+                "Batch mode names outputs per feed; use '--output-dir' to choose where they go.");
+            Environment.Exit(1);
+            return;
+        }
+
+        // Batch always writes to files, so log level resolves as for file output.
+        if (!quiet && !CliOutputModePolicy.TryParseLogLevel(logLevelRaw, out _))
+        {
+            Console.Error.WriteLine(
+                $"Error: '--log-level' value '{logLevelRaw}' is invalid. " +
+                "Valid values are: trace, debug, information, warning, error, critical, none.");
+            Environment.Exit(1);
+            return;
+        }
+
+        var load = FeedsFileLoader.Load(feedsFile!.FullName);
+        if (!load.Success)
+        {
+            Console.Error.WriteLine($"Error: {load.Error}");
+            Environment.Exit(1);
+            return;
+        }
+
+        var batchLogLevel = CliOutputModePolicy.ResolveEffectiveLogLevel(
+            writingJsonToStdout: false, quiet, logLevelRaw);
+        var outputDirectory = outputDir ?? new DirectoryInfo(Directory.GetCurrentDirectory());
+
+        var batchExitCode = await WithPipeline(timeoutSeconds, batchLogLevel,
+            async (runner, loggerFactory) =>
+            {
+                var batchRunner = new FeedBatchRunner(
+                    runner, loggerFactory.CreateLogger<FeedBatchRunner>());
+                return await batchRunner.ExecuteAsync(
+                    load.Feeds, outputDirectory, maxRecords, verbose, cancellationToken);
+            });
+
+        Environment.Exit(batchExitCode);
+        return;
+    }
+
+    // ── Single mode (--oruk-url) ──────────────────────────────────────────────
+
+    // Apply --output-dir as the base directory for the single-mode output files.
+    jsonLd = ResolveUnderDirectory(jsonLd, outputDir);
+    dataQualityReport = ResolveUnderDirectory(dataQualityReport, outputDir);
+    if (outputDir is not null && (jsonLd is not null || dataQualityReport is not null))
+        Directory.CreateDirectory(outputDir.FullName);
+
+    var writingJsonToStdout = jsonLd is null;
 
     if (!Uri.TryCreate(orukUrlRaw, UriKind.Absolute, out var orukUrl))
     {
@@ -109,7 +220,7 @@ rootCommand.SetAction(async (ParseResult parseResult, CancellationToken cancella
         Environment.Exit(1);
         return;
     }
-    if (LooksLikeDuplicatedScheme(orukUrlRaw, orukUrl))
+    if (LooksLikeDuplicatedScheme(orukUrlRaw!, orukUrl))
     {
         const string warning =
             "The supplied ORUK URL appears malformed due to a duplicated URL scheme. " +
@@ -130,15 +241,6 @@ rootCommand.SetAction(async (ParseResult parseResult, CancellationToken cancella
             Console.Error.WriteLine($"Data-quality report written to '{dataQualityReport.FullName}'.");
         }
 
-        Environment.Exit(1);
-        return;
-    }
-
-    // Validate --format
-    if (!string.Equals(format, "json-ld", StringComparison.OrdinalIgnoreCase))
-    {
-        Console.Error.WriteLine(
-            $"Error: '--format' value '{format}' is not supported. Only 'json-ld' is currently available.");
         Environment.Exit(1);
         return;
     }
@@ -168,49 +270,15 @@ rootCommand.SetAction(async (ParseResult parseResult, CancellationToken cancella
         return;
     }
 
-    // ── Resolve log level ─────────────────────────────────────────────────────
-
     var logLevel = CliOutputModePolicy.ResolveEffectiveLogLevel(
         writingJsonToStdout,
         quiet,
         logLevelRaw);
 
-    // ── HTTP client ───────────────────────────────────────────────────────────
+    var exitCode = await WithPipeline(timeoutSeconds, logLevel,
+        (runner, _) => runner.ExecuteAsync(
+            orukUrl, jsonLd, maxRecords, verbose, dataQualityReport, cancellationToken));
 
-    using var httpClient = new HttpClient
-    {
-        Timeout = TimeSpan.FromSeconds(timeoutSeconds > 0 ? timeoutSeconds : 30)
-    };
-    httpClient.DefaultRequestHeaders.UserAgent.ParseAdd(
-        "OrukTransformer.Cli/1.0 (+https://github.com/iStandUK/ORUK-AlternativeRepresentations)");
-
-    // ── Logging ───────────────────────────────────────────────────────────────
-
-    using var loggerFactory = LoggerFactory.Create(builder =>
-        builder.AddConsole().SetMinimumLevel(logLevel));
-
-    // ── Services ──────────────────────────────────────────────────────────────
-
-    var fetcher = new OrukFeedPageFetcher(
-        httpClient, loggerFactory.CreateLogger<OrukFeedPageFetcher>());
-
-    var transformer = new OrukToSchemaOrgTransformer();
-    var merger = new JsonLdMerger();
-    var writer = new JsonLdWriter();
-    var reporter = new VodimReporter();
-    var dataQualityReportWriter = new HtmlDataQualityReportWriter();
-
-    var runner = new RunCommand(
-        fetcher,
-        transformer,
-        merger,
-        writer,
-        reporter,
-        dataQualityReportWriter,
-        loggerFactory.CreateLogger<RunCommand>());
-
-    var exitCode = await runner.ExecuteAsync(orukUrl, jsonLd, maxRecords, verbose,
-        dataQualityReport, cancellationToken);
     Environment.Exit(exitCode);
 });
 
@@ -218,6 +286,49 @@ var result = rootCommand.Parse(args);
 return await result.InvokeAsync();
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
+
+// Builds the HTTP client, logging and transform pipeline, runs the supplied body,
+// and disposes the client/logger factory afterwards.
+static async Task<int> WithPipeline(
+    int timeoutSeconds,
+    LogLevel logLevel,
+    Func<RunCommand, ILoggerFactory, Task<int>> body)
+{
+    using var httpClient = new HttpClient
+    {
+        Timeout = TimeSpan.FromSeconds(timeoutSeconds > 0 ? timeoutSeconds : 30)
+    };
+    httpClient.DefaultRequestHeaders.UserAgent.ParseAdd(
+        "OrukTransformer.Cli/1.0 (+https://github.com/iStandUK/ORUK-AlternativeRepresentations)");
+
+    using var loggerFactory = LoggerFactory.Create(builder =>
+        builder.AddConsole().SetMinimumLevel(logLevel));
+
+    // The geocoder is only consulted for proximity queries, which the CLI never sets,
+    // so it is effectively inert here; it is required by the service client's contract.
+    var geocoder = new PostcodesIoGeocoder(
+        httpClient, loggerFactory.CreateLogger<PostcodesIoGeocoder>());
+    var serviceClient = new OrukServiceClient(
+        httpClient, loggerFactory.CreateLogger<OrukServiceClient>(), geocoder);
+
+    var runner = new RunCommand(
+        serviceClient,
+        new OrukToSchemaOrgTransformer(),
+        new JsonLdMerger(),
+        new JsonLdWriter(),
+        new VodimReporter(),
+        new HtmlDataQualityReportWriter(),
+        loggerFactory.CreateLogger<RunCommand>());
+
+    return await body(runner, loggerFactory);
+}
+
+// Re-homes a relative or absolute output file under a base directory (by file name),
+// or returns the file unchanged when no directory was supplied.
+static FileInfo? ResolveUnderDirectory(FileInfo? file, DirectoryInfo? directory) =>
+    file is null || directory is null
+        ? file
+        : new FileInfo(Path.Combine(directory.FullName, file.Name));
 
 static bool WasOptionProvided(ParseResult parseResult, string longAlias) =>
     parseResult.Tokens.Any(t =>

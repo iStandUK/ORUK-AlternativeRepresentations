@@ -1,26 +1,55 @@
 # OrukTransformer.Cli
 
-A .NET 10 command-line application that fetches a live **Open Referral UK (ORUK) v3** service-directory endpoint, transforms each service to **Schema.org JSON-LD**, and reports **VODIM** data-quality metrics.
+A .NET 10 command-line application that fetches a live **Open Referral UK (ORUK) v3** service-directory endpoint (or a batch of them), transforms each service to **Schema.org JSON-LD**, and reports **VODIM** data-quality metrics.
 
 ## Usage
+
+Single feed:
 
 ```
 oruk-transformer --oruk-url <url> [--json-ld <file>] [--max-records <n>] [--format json-ld] [--timeout <seconds>] [--verbose] [--log-level <level>] [--quiet]
 ```
 
+Batch mode (every feed in a `feeds.json`):
+
+```
+oruk-transformer --feeds <feeds.json> [--output-dir <dir>] [--max-records <n>] [--verbose] [--timeout <seconds>] [--log-level <level>] [--quiet]
+```
+
+`--oruk-url` and `--feeds` are mutually exclusive; exactly one is required.
+
 ### Options
 
 | Option | Type | Required | Default | Description |
 |---|---|---|---|---|
-| `--oruk-url` | URI | Yes | — | URL of the ORUK v3 `GET /services` endpoint |
-| `--json-ld` | file path | No | stdout | Output file for the JSON-LD; omit to write to stdout |
-| `--max-records` | int | No | `50` | Max services to retrieve; values < 1 = no limit |
+| `--oruk-url` | URI | One of `--oruk-url`/`--feeds` | — | URL of the ORUK v3 `GET /services` endpoint. Mutually exclusive with `--feeds` |
+| `--feeds` | file path | One of `--oruk-url`/`--feeds` | — | Path to a `feeds.json` file; processes every feed in batch mode (see below). Mutually exclusive with `--oruk-url` |
+| `--output-dir` | directory path | No | current directory | In batch mode, directory where per-feed JSON-LD and report files are written. In single mode, base directory for `--json-ld`/`--data-quality-report` |
+| `--json-ld` | file path | No | stdout | Output file for the JSON-LD; omit to write to stdout. Ignored in batch mode |
+| `--max-records` | int | No | `50` | Max services to retrieve (per feed); values < 1 = no limit |
 | `--verbose` | flag | No | `false` | Emit per-service VODIM field-level detail |
 | `--log-level` | string | No | `information` | Log level: `trace`, `debug`, `information`, `warning`, `error`, `critical`, `none` |
 | `--quiet` | flag | No | `false` | Equivalent to `--log-level warning` |
 | `--timeout` | int | No | `30` | Per-request HTTP timeout in seconds; values < 1 treated as `30` |
 | `--format` | string | No | `json-ld` | Output format (currently only `json-ld`) |
-| `--data-quality-report` | file path | No | — | Write an xHTML5 data-quality HTML report to this file |
+| `--data-quality-report` | file path | No | — | Write an xHTML5 data-quality HTML report to this file. Ignored in batch mode, which names reports per feed |
+
+## Batch mode (`--feeds`)
+
+`--feeds` points at a `feeds.json` file — an array of feed entries:
+
+```json
+[
+  { "url": "https://bristol.openplace.directory/o/OpenReferralService/v3", "name": "Bristol", "aliases": ["bristol"] }
+]
+```
+
+Only `url` and `name` are currently read (`aliases` is reserved for future lookup by short name). For each feed, the CLI runs the same fetch → transform → report pipeline as single mode and writes two files into `--output-dir`, named from a slug of the feed's `name`:
+
+- `<slug>.jsonld` — the Schema.org JSON-LD document
+- `<slug>.data-quality.html` — the xHTML5 data-quality report
+
+If two feeds slugify to the same name, later ones are disambiguated with `-2`, `-3`, etc. A single feed failing (network error, bad response, etc.) is logged and does not abort the batch; the run's exit code is `0` only if every feed produced output, otherwise `1`.
 
 ### Examples
 

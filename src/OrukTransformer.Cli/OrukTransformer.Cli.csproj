@@ -21,6 +21,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\code\OrukModels\OrukModels.csproj" />
+    <ProjectReference Include="..\OrukApiClient\OrukApiClient.csproj" />
     <ProjectReference Include="..\OrukTransformer.Core\OrukTransformer.Core.csproj" />
   </ItemGroup>
 
