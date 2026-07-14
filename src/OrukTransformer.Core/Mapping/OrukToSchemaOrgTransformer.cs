@@ -1,6 +1,7 @@
 using OrukModels.Models;
 using OrukModels.SchemaOrg;
 using OrukTransformer.Core.Vodim;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 
 namespace OrukTransformer.Core.Mapping;
@@ -232,10 +233,11 @@ public sealed partial class OrukToSchemaOrgTransformer : IOrukToSchemaOrgTransfo
             service.Licenses, null,
             "Deprecated HSDS field. No Schema.org mapping.");
 
-        // alert → no Schema.org equivalent
-        Record(report, "service.alert", "—",
-            string.IsNullOrEmpty(service.Alert) ? VodimClassification.Missing : VodimClassification.Unmapped,
-            service.Alert, null, "No Schema.org mapping defined for alert.");
+        // alert → no Schema.org equivalent. ORUK defines alert as a string; a feed that
+        // instead supplies a JSON object/array (e.g. Southampton's {"text": "…"}) is a
+        // type nonconformance and is flagged Invalid rather than carried through.
+        var (alertClass, alertNote) = ClassifyAlert(service.Alert);
+        Record(report, "service.alert", "—", alertClass, service.Alert, null, alertNote);
 
         // last_modified → additionalProperty[dateModified]
         var (dateModClass, dateModNote) = ClassifyDate(service.LastModified);
@@ -1620,6 +1622,45 @@ public sealed partial class OrukToSchemaOrgTransformer : IOrukToSchemaOrgTransfo
             return (VodimClassification.Valid, null);
         return (VodimClassification.Invalid,
             $"'{value}' does not appear to be a valid ISO 4217 3-letter currency code.");
+    }
+
+    /// <summary>
+    /// Classifies the ORUK <c>alert</c> field. ORUK defines it as a plain string with no
+    /// Schema.org equivalent, so a conformant present value is
+    /// <see cref="VodimClassification.Unmapped"/>. A feed that instead publishes a JSON
+    /// object or array (e.g. Southampton's <c>{"text": "…"}</c>) is a type nonconformance
+    /// and is reported as <see cref="VodimClassification.Invalid"/>.
+    /// </summary>
+    private static (VodimClassification Class, string? Note) ClassifyAlert(string? value)
+    {
+        const string unmappedNote = "No Schema.org mapping defined for alert.";
+        if (string.IsNullOrEmpty(value))
+            return (VodimClassification.Missing, unmappedNote);
+        if (ArrivedAsJsonStructure(value))
+            return (VodimClassification.Invalid,
+                "ORUK defines alert as a string, but the feed supplied a JSON object/array. " +
+                "The value was not mapped.");
+        return (VodimClassification.Unmapped, unmappedNote);
+    }
+
+    /// <summary>
+    /// Detects a string whose content is actually a JSON object or array — the shape the
+    /// tolerant deserializer (<c>TolerantStringConverter</c>) produces when a feed supplies
+    /// structured JSON for a field ORUK defines as a string.
+    /// </summary>
+    private static bool ArrivedAsJsonStructure(string value)
+    {
+        var span = value.AsSpan().TrimStart();
+        if (span.IsEmpty || (span[0] != '{' && span[0] != '[')) return false;
+        try
+        {
+            using var document = JsonDocument.Parse(value);
+            return document.RootElement.ValueKind is JsonValueKind.Object or JsonValueKind.Array;
+        }
+        catch (JsonException)
+        {
+            return false;
+        }
     }
 
     private static (VodimClassification Class, string? Note, double? Value)
