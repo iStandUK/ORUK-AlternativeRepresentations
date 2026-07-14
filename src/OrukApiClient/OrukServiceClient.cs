@@ -2,6 +2,7 @@ using System.Runtime.CompilerServices;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using OrukApiClient.Internal;
+using OrukModels.Json;
 using OrukModels.Models;
 
 namespace OrukApiClient;
@@ -301,8 +302,7 @@ public sealed class OrukServiceClient : IOrukServiceClient
             var body = await response.Content.ReadAsStringAsync(cancellationToken);
 
             // Single-service endpoints return the object directly, not wrapped in a page.
-            return JsonSerializer.Deserialize<OrukService>(body,
-                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            return JsonSerializer.Deserialize<OrukService>(body, OrukJson.Default);
         }
         catch (Exception ex) when (ex is HttpRequestException or JsonException)
         {
@@ -330,18 +330,7 @@ public sealed class OrukServiceClient : IOrukServiceClient
 
         try
         {
-            return JsonSerializer.Deserialize<OrukPage<OrukService>>(body);
-        }
-        catch (JsonException)
-        {
-            // First attempt failed — retry once with case-insensitive property matching
-            // before giving up (some feeds use PascalCase property names).
-        }
-
-        try
-        {
-            return JsonSerializer.Deserialize<OrukPage<OrukService>>(body,
-                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            return JsonSerializer.Deserialize<OrukPage<OrukService>>(body, OrukJson.Default);
         }
         catch (JsonException ex)
         {

@@ -2,6 +2,7 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using OrukApiClient.Internal;
+using OrukModels.Json;
 using OrukModels.Models;
 
 namespace OrukApiClient;
@@ -120,12 +121,11 @@ public sealed class OrukTaxonomyClient : IOrukTaxonomyClient
     {
         try
         {
-            return JsonSerializer.Deserialize<OrukPage<OrukTaxonomyTerm>>(body);
+            return JsonSerializer.Deserialize<OrukPage<OrukTaxonomyTerm>>(body, OrukJson.Default);
         }
         catch (JsonException)
         {
-            return JsonSerializer.Deserialize<OrukPage<OrukTaxonomyTerm>>(body,
-                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            return null;
         }
     }
 }

@@ -2,6 +2,7 @@ using System.Runtime.CompilerServices;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using OrukApiClient.Internal;
+using OrukModels.Json;
 using OrukModels.Models;
 
 namespace OrukApiClient;
@@ -121,8 +122,7 @@ public sealed class OrukOrganizationClient : IOrukOrganizationClient
             response.EnsureSuccessStatusCode();
             var body = await response.Content.ReadAsStringAsync(cancellationToken);
 
-            return JsonSerializer.Deserialize<OrukOrganization>(body,
-                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            return JsonSerializer.Deserialize<OrukOrganization>(body, OrukJson.Default);
         }
         catch (Exception ex) when (ex is HttpRequestException or JsonException)
         {
@@ -137,24 +137,12 @@ public sealed class OrukOrganizationClient : IOrukOrganizationClient
     {
         try
         {
-            return JsonSerializer.Deserialize<OrukPage<OrukOrganization>>(body);
-        }
-        catch (JsonException)
-        {
-            _logger.LogWarning(
-                "Deserialisation failed for organizations page {Page} from {Url}. Retrying case-insensitive.",
-                page, url);
-        }
-
-        try
-        {
-            return JsonSerializer.Deserialize<OrukPage<OrukOrganization>>(body,
-                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            return JsonSerializer.Deserialize<OrukPage<OrukOrganization>>(body, OrukJson.Default);
         }
         catch (JsonException ex)
         {
             _logger.LogError(ex,
-                "Fallback deserialisation also failed for organizations page {Page} from {Url}.", page, url);
+                "Deserialisation failed for organizations page {Page} from {Url}.", page, url);
             return null;
         }
     }
