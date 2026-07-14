@@ -113,6 +113,45 @@ public class FeedEnvelopeToleranceTests
         Assert.Equal(expected, service.Id);
     }
 
+    // ── Object/array-valued string fields (Southampton `alert`) are captured, not fatal ──
+
+    [Fact]
+    public void TolerantStringConverter_ObjectValuedStringField_CapturesRawJsonInsteadOfThrowing()
+    {
+        // Southampton publishes `alert` as an object where ORUK defines a string. Before the
+        // fix this threw and failed the whole page; now the raw JSON is captured verbatim.
+        const string json = "{\"id\":\"svc-1\",\"alert\":{\"text\":\"We have spaces available\"}}";
+        var service = JsonSerializer.Deserialize<OrukService>(json, OrukJson.Default);
+        Assert.NotNull(service);
+        Assert.Equal("svc-1", service.Id);
+        Assert.NotNull(service.Alert);
+        using var alert = JsonDocument.Parse(service.Alert!);
+        Assert.Equal("We have spaces available", alert.RootElement.GetProperty("text").GetString());
+    }
+
+    [Fact]
+    public void TolerantStringConverter_ArrayValuedStringField_IsCapturedAsRawJson()
+    {
+        const string json = "{\"id\":\"svc-2\",\"alert\":[\"a\",\"b\"]}";
+        var service = JsonSerializer.Deserialize<OrukService>(json, OrukJson.Default);
+        Assert.NotNull(service);
+        Assert.StartsWith("[", service.Alert!.TrimStart());
+    }
+
+    [Fact]
+    public void ObjectValuedAlert_DoesNotFailWholePage()
+    {
+        const string json = """
+        {"total_items":1,"total_pages":1,"page_number":1,"contents":[
+          {"id":"svc-1","name":"Test","alert":{"text":"We have spaces available"}}
+        ]}
+        """;
+        var page = JsonSerializer.Deserialize<OrukPage<OrukService>>(json, OrukJson.Default);
+        Assert.NotNull(page);
+        Assert.Single(page.Contents);
+        Assert.Equal("svc-1", page.Contents[0].Id);
+    }
+
     // ── Write path: round-trips to canonical snake_case ─────────────────────────────
 
     [Fact]
