@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using OrukModels.Json;
 
 namespace OrukModels.Models;
 
@@ -6,6 +7,12 @@ namespace OrukModels.Models;
 /// Represents a paginated ORUK v3 API response.
 /// </summary>
 /// <typeparam name="T">The type of items in the <see cref="Contents"/> collection.</typeparam>
+/// <remarks>
+/// Deserialized via <see cref="OrukPageJsonConverterFactory"/>, which tolerates the
+/// differing pagination envelopes used across ORUK publishers (snake_case, Spring
+/// camelCase, and all-lowercase) so every feed populates the same shape.
+/// </remarks>
+[JsonConverter(typeof(OrukPageJsonConverterFactory))]
 public record OrukPage<T>
 {
     [JsonPropertyName("total_items")]
