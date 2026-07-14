@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging;
+using OrukModels.Json;
 using OrukModels.Models;
 using System.Net.Http.Json;
 using System.Runtime.CompilerServices;
@@ -111,24 +112,19 @@ public sealed class OrukFeedPageFetcher : IOrukFeedPageFetcher
                 try
                 {
                     page = await response.Content.ReadFromJsonAsync<OrukPage<OrukService>>(
-                        cancellationToken: cancellationToken);
+                        OrukJson.Default, cancellationToken: cancellationToken);
                 }
                 catch (JsonException ex)
                 {
-                    _logger.LogError(ex, 
-                        "JSON deserialization failed for page {Page} from {Url}. Attempting fallback with case-insensitive options.", 
+                    _logger.LogError(ex,
+                        "JSON deserialization failed for page {Page} from {Url}. Attempting fallback.",
                         currentPage, url);
 
-                    // Fallback: read the buffered content as a string and retry
-                    // with case-insensitive property matching.
+                    // Fallback: read the buffered content as a string and retry.
                     string responseBody = await response.Content.ReadAsStringAsync(cancellationToken);
                     try
                     {
-                        var fallbackOptions = new JsonSerializerOptions
-                        {
-                            PropertyNameCaseInsensitive = true
-                        };
-                        page = JsonSerializer.Deserialize<OrukPage<OrukService>>(responseBody, fallbackOptions);
+                        page = JsonSerializer.Deserialize<OrukPage<OrukService>>(responseBody, OrukJson.Default);
 
                         if (page is not null)
                         {
