@@ -4,7 +4,7 @@ An [MCP (Model Context Protocol)](https://modelcontextprotocol.io/) server that 
 
 ## Overview
 
-This project implements an MCP server using the [official C# MCP SDK](https://github.com/modelcontextprotocol/csharp-sdk). It exposes thirteen tools that an AI agent can call to help a user find community services, understand eligibility, and get location and contact details.
+This project implements an MCP server using the [official C# MCP SDK](https://github.com/modelcontextprotocol/csharp-sdk). It exposes fifteen tools that an AI agent can call to help a user find community services, understand eligibility, get location and contact details, and transform or quality-check the underlying data.
 
 Service and organisation narrative fields are normalised to plain text before being returned (HTML markup stripped, entities decoded, and literal `\u003C...\u003E` style escapes normalised) so MCP responses remain readable without extra post-processing by the calling agent. The normalization logic is provided by `OrukTransformer.Core.OrukPlainText` and called directly at MCP response mapping points.
 
@@ -25,6 +25,8 @@ Service and organisation narrative fields are normalised to plain text before be
 | `get_services_updated_since` | Find services added or updated since a given date — useful for monitoring new provision. |
 | `search_organisations` | Search for organisations (charities, councils, NHS bodies) that deliver services. |
 | `get_organisation_detail` | Full profile of an organisation — description, contacts, website, legal status, services. |
+| `get_service_jsonld` | Transform a service (or a sample of a feed) into Schema.org JSON-LD — a `@graph` of `GovernmentService`, `Organization`, and `Place` nodes. Accepts `serviceId` (single service) and `maxRecords`. |
+| `get_data_quality_report` | Assess a feed's VODIM data quality (Valid / Other / Default / Invalid / Missing / Unmapped). Returns a structured JSON breakdown by default, or the branded xHTML5 report when `format` is `html`. Accepts `maxRecords`. |
 
 ## Running in Development (stdio)
 
@@ -128,8 +130,14 @@ OrukTransformer.Mcp/
     ├── OrukRequiredDocumentsTool.cs   # get_required_documents MCP tool
     ├── OrukServiceFilterTool.cs       # get_services_by_language / find_accessible_services / find_services_by_delivery_type
     ├── OrukRecentlyUpdatedTool.cs     # get_services_updated_since MCP tool
-    └── OrukOrganizationTool.cs        # search_organisations / get_organisation_detail MCP tools
+    ├── OrukOrganizationTool.cs        # search_organisations / get_organisation_detail MCP tools
+    ├── OrukJsonLdTool.cs              # get_service_jsonld MCP tool
+    └── OrukDataQualityTool.cs         # get_data_quality_report MCP tool
 ```
+
+The last two tools reuse the shared transform, merge, and VODIM reporting logic in
+`OrukTransformer.Core` (`Mapping/`, `Vodim/`, `Reporting/`) — the same code the CLI uses —
+so their JSON-LD and data-quality output is identical to `oruk-transformer`.
 
 ## Dependencies
 
