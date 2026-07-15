@@ -5,9 +5,9 @@ using System.Text.Json.Serialization;
 namespace OrukModels.Json;
 
 /// <summary>
-/// Reads a JSON string, number, or boolean into a CLR <see cref="string"/>.
+/// Reads a JSON string, number, boolean, object, or array into a CLR <see cref="string"/>.
 ///
-/// ORUK feeds are inconsistent about identifier types. Some publishers — notably
+/// ORUK feeds are inconsistent about the types they publish. Some publishers — notably
 /// Buckinghamshire's Family Information Service API — emit integer <c>id</c> values
 /// (e.g. <c>"id": 2830</c>), which the default System.Text.Json binder rejects for a
 /// <see cref="string"/> property, causing the whole record (and therefore the whole
@@ -15,6 +15,12 @@ namespace OrukModels.Json;
 /// coerces scalar JSON values to their textual form so those records load instead of
 /// throwing. Identifiers are already treated as opaque strings throughout the models,
 /// so nothing downstream assumes a UUID shape.
+///
+/// A few feeds go further and publish an <em>object or array</em> where ORUK defines a
+/// string — for example Southampton's <c>alert</c> arrives as <c>{"text": "…"}</c>.
+/// Rather than fail the whole page, the raw JSON is captured verbatim so the value
+/// survives; the transformation layer flags the type nonconformance in its data-quality
+/// report.
 /// </summary>
 public sealed class TolerantStringConverter : JsonConverter<string>
 {
@@ -50,9 +56,19 @@ public sealed class TolerantStringConverter : JsonConverter<string>
             JsonTokenType.True => "true",
             JsonTokenType.False => "false",
             JsonTokenType.Number => ReadNumberAsString(ref reader),
+            JsonTokenType.StartObject or JsonTokenType.StartArray => ReadStructuredAsRawJson(ref reader),
             _ => throw new JsonException(
                 $"Cannot convert JSON token '{reader.TokenType}' to a string.")
         };
+
+    // Some feeds supply a JSON object/array for a field ORUK defines as a string
+    // (e.g. Southampton's `alert`). Capturing the raw JSON keeps the value — and the
+    // nonconformance — visible to the report instead of failing the whole page.
+    private static string ReadStructuredAsRawJson(ref Utf8JsonReader reader)
+    {
+        using var document = JsonDocument.ParseValue(ref reader);
+        return document.RootElement.GetRawText();
+    }
 
     private static string ReadNumberAsString(ref Utf8JsonReader reader)
     {

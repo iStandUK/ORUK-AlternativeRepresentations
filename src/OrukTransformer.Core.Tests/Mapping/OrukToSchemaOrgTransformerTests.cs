@@ -340,6 +340,41 @@ public class OrukToSchemaOrgTransformerTests
         Assert.Equal(VodimClassification.Invalid, rec?.Classification);
     }
 
+    [Fact]
+    public void Transform_AlertAsJsonObject_RecordsInvalid_WithNonconformanceNote()
+    {
+        // Southampton publishes `alert` as an object; the tolerant deserializer captures
+        // the raw JSON, and the transformer must flag the type nonconformance.
+        var service = MinimalService();
+        service.Alert = "{\"text\": \"We have spaces available\"}";
+        var result = _sut.Transform(service, _opts);
+        var rec = FindRecord(result.Report, "service.alert");
+
+        Assert.Equal(VodimClassification.Invalid, rec?.Classification);
+        Assert.Contains("JSON object/array", rec?.Note);
+    }
+
+    [Fact]
+    public void Transform_AlertAsPlainString_RecordsUnmapped()
+    {
+        // A conformant (plain string) alert has no Schema.org mapping and stays Unmapped.
+        var service = MinimalService();
+        service.Alert = "Places available";
+        var result = _sut.Transform(service, _opts);
+        var rec = FindRecord(result.Report, "service.alert");
+
+        Assert.Equal(VodimClassification.Unmapped, rec?.Classification);
+    }
+
+    [Fact]
+    public void Transform_AlertAbsent_RecordsMissing()
+    {
+        var result = _sut.Transform(MinimalService(), _opts);
+        var rec = FindRecord(result.Report, "service.alert");
+
+        Assert.Equal(VodimClassification.Missing, rec?.Classification);
+    }
+
     // ── VODIM: Other classifications ──────────────────────────────────────────────
 
     [Fact]
