@@ -152,6 +152,51 @@ public class FeedEnvelopeToleranceTests
         Assert.Equal("svc-1", page.Contents[0].Id);
     }
 
+    // ── Per-record tolerance: one bad record must not drop the whole page ────────────
+
+    [Fact]
+    public void MalformedRecord_IsSkipped_RestOfPageSurvives()
+    {
+        // The middle record supplies a numeric field (minimum_age) as an object — an
+        // untolerated shape. Before per-record tolerance this threw and discarded the whole
+        // page (and, via the caller, truncated the rest of the feed).
+        const string json = """
+        {"total_items":3,"total_pages":1,"page_number":1,"contents":[
+          {"id":"ok-1","name":"A"},
+          {"id":"bad","name":"B","minimum_age":{"unexpected":"object"}},
+          {"id":"ok-2","name":"C"}
+        ]}
+        """;
+        var page = JsonSerializer.Deserialize<OrukPage<OrukService>>(json, OrukJson.Default);
+
+        Assert.NotNull(page);
+        Assert.Equal(2, page.Contents.Count);
+        Assert.Equal(1, page.MalformedItemCount);
+        Assert.DoesNotContain(page.Contents, s => s.Id == "bad");
+        Assert.Contains(page.Contents, s => s.Id == "ok-1");
+        Assert.Contains(page.Contents, s => s.Id == "ok-2");
+    }
+
+    [Fact]
+    public void CleanPage_ReportsZeroMalformedItems()
+    {
+        var page = DeserializePage("bristol-services-page1.json");
+        Assert.NotNull(page);
+        Assert.Equal(0, page.MalformedItemCount);
+    }
+
+    [Fact]
+    public void NonArrayContents_DoesNotThrow_YieldsEmptyPage()
+    {
+        // A feed that supplies an object where `contents` should be an array must not fail
+        // the page; there are simply no harvestable records.
+        const string json = """{"total_items":0,"contents":{"unexpected":"object"}}""";
+        var page = JsonSerializer.Deserialize<OrukPage<OrukService>>(json, OrukJson.Default);
+
+        Assert.NotNull(page);
+        Assert.Empty(page.Contents);
+    }
+
     // ── Write path: round-trips to canonical snake_case ─────────────────────────────
 
     [Fact]

@@ -49,6 +49,7 @@ internal sealed class OrukPageJsonConverter<T> : JsonConverter<OrukPage<T>>
         bool firstPage = false, lastPage = false, empty = false;
         string? nextUrlSnake = null, nextUrlNext = null;
         IReadOnlyList<T> contents = [];
+        int malformedItems = 0;
 
         while (reader.Read() && reader.TokenType != JsonTokenType.EndObject)
         {
@@ -88,7 +89,7 @@ internal sealed class OrukPageJsonConverter<T> : JsonConverter<OrukPage<T>>
                     break;
                 case "contents":
                 case "content":
-                    contents = JsonSerializer.Deserialize<List<T>>(ref reader, options) ?? [];
+                    contents = ReadContentsTolerantly(ref reader, options, out malformedItems);
                     break;
                 case "nexturl":
                     nextUrlSnake = ReadStringOrNull(ref reader);
@@ -112,9 +113,56 @@ internal sealed class OrukPageJsonConverter<T> : JsonConverter<OrukPage<T>>
             LastPage = lastPage,
             Empty = empty,
             Contents = contents,
+            MalformedItemCount = malformedItems,
             NextUrlSnakeCase = nextUrlSnake,
             NextUrlNext = nextUrlNext,
         };
+    }
+
+    /// <summary>
+    /// Reads the <c>contents</c>/<c>content</c> array one element at a time. Each element is
+    /// materialized into a detached <see cref="JsonElement"/> first, then deserialized
+    /// independently, so a single record with an untolerated shape (e.g. a numeric field
+    /// supplied as an object, or an array field supplied as a scalar) is counted and skipped
+    /// rather than aborting the whole page. Deserializing the array in one call previously
+    /// meant one malformed record discarded every other record on the page — and, because the
+    /// caller reads a failed page as "no results", silently truncated the rest of the feed.
+    /// </summary>
+    private static IReadOnlyList<T> ReadContentsTolerantly(
+        ref Utf8JsonReader reader, JsonSerializerOptions options, out int malformed)
+    {
+        malformed = 0;
+
+        if (reader.TokenType == JsonTokenType.Null)
+            return [];
+
+        if (reader.TokenType != JsonTokenType.StartArray)
+        {
+            // ORUK defines contents as an array. A feed that supplies something else has no
+            // harvestable records here; consume the token and report an empty page.
+            reader.Skip();
+            return [];
+        }
+
+        // Parse the array into a detached document so a malformed element cannot corrupt the
+        // shared reader's position (which would abort the entire page). ParseValue leaves the
+        // reader positioned on the array's EndArray token, exactly as a List<T> read would.
+        using var document = JsonDocument.ParseValue(ref reader);
+        var items = new List<T>(document.RootElement.GetArrayLength());
+        foreach (var element in document.RootElement.EnumerateArray())
+        {
+            try
+            {
+                var item = element.Deserialize<T>(options);
+                if (item is not null)
+                    items.Add(item);
+            }
+            catch (JsonException)
+            {
+                malformed++;
+            }
+        }
+        return items;
     }
 
     public override void Write(

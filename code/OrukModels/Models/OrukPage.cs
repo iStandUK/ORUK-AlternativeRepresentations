@@ -39,6 +39,16 @@ public record OrukPage<T>
     [JsonPropertyName("contents")]
     public IReadOnlyList<T> Contents { get; init; } = [];
 
+    /// <summary>
+    /// Number of items present in the source page that could not be deserialized and were
+    /// skipped ("receive liberally"). Zero for a clean page. This is a decode-time signal,
+    /// not part of the ORUK wire envelope, so callers can warn — and correctly detect
+    /// end-of-data by raw item count — rather than silently dropping records or stopping
+    /// a page short. See <see cref="OrukPageJsonConverter{T}"/>.
+    /// </summary>
+    [JsonIgnore]
+    public int MalformedItemCount { get; init; }
+
     // ── RPDE (Realtime Paged Data Exchange) support ──────────────────────────────
 
     /// <summary>

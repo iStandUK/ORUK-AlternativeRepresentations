@@ -375,6 +375,33 @@ public class OrukToSchemaOrgTransformerTests
         Assert.Equal(VodimClassification.Missing, rec?.Classification);
     }
 
+    [Fact]
+    public void Transform_AnyStringFieldAsJsonObject_RecordsInvalid()
+    {
+        // The nonconformance flag is general, not alert-specific: any ORUK string field the
+        // tolerant deserializer captured as raw JSON (object/array) is flagged Invalid.
+        var service = MinimalService();
+        service.Description = "{\"nested\": \"object\"}";
+        var result = _sut.Transform(service, _opts);
+        var rec = FindRecord(result.Report, "service.description");
+
+        Assert.Equal(VodimClassification.Invalid, rec?.Classification);
+        Assert.Contains("JSON object/array", rec?.Note);
+    }
+
+    [Fact]
+    public void Transform_StringFieldWithJsonLikeButPlainText_StaysValid()
+    {
+        // A value that merely starts with '{' but is not valid JSON is ordinary text, not a
+        // structural nonconformance, and must not be mis-flagged.
+        var service = MinimalService();
+        service.Description = "{opening hours vary}";
+        var result = _sut.Transform(service, _opts);
+        var rec = FindRecord(result.Report, "service.description");
+
+        Assert.Equal(VodimClassification.Valid, rec?.Classification);
+    }
+
     // ── VODIM: Other classifications ──────────────────────────────────────────────
 
     [Fact]
