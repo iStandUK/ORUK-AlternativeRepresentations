@@ -80,6 +80,7 @@ builder.Services
     .WithTools<OrukRequiredDocumentsTool>()
     .WithTools<OrukServiceFilterTool>()
     .WithTools<OrukRecentlyUpdatedTool>()
+    .WithTools<OrukServiceEnumerationTool>()
     .WithTools<OrukOrganizationTool>();
 
 var host = builder.Build();
