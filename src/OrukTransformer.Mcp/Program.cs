@@ -3,6 +3,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OrukApiClient;
+using OrukTransformer.Core.Mapping;
 using OrukTransformer.Mcp;
 using OrukTransformer.Mcp.Config;
 using OrukTransformer.Mcp.Taxonomy;
@@ -68,6 +69,10 @@ builder.Services
 // ── Application services ───────────────────────────────────────────────────────
 builder.Services.AddSingleton<ITaxonomyCache, TaxonomyCache>();
 
+// Shared Core transform + merge pipeline (also used by the CLI). Both are stateless.
+builder.Services.AddSingleton<IOrukToSchemaOrgTransformer, OrukToSchemaOrgTransformer>();
+builder.Services.AddSingleton<IJsonLdMerger, JsonLdMerger>();
+
 // ── MCP server ────────────────────────────────────────────────────────────────
 builder.Services
     .AddMcpServer()
@@ -81,7 +86,9 @@ builder.Services
     .WithTools<OrukServiceFilterTool>()
     .WithTools<OrukRecentlyUpdatedTool>()
     .WithTools<OrukServiceEnumerationTool>()
-    .WithTools<OrukOrganizationTool>();
+    .WithTools<OrukOrganizationTool>()
+    .WithTools<OrukJsonLdTool>()
+    .WithTools<OrukDataQualityTool>();
 
 var host = builder.Build();
 

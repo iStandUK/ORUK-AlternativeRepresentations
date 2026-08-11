@@ -1,7 +1,6 @@
 using OrukModels.SchemaOrg;
-using OrukTransformer.Core.Mapping;
 
-namespace OrukTransformer.Cli.Output;
+namespace OrukTransformer.Core.Mapping;
 
 /// <summary>
 /// Merges the Schema.org JSON-LD documents produced by multiple

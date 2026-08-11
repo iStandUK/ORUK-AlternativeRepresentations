@@ -1,10 +1,9 @@
 using OrukModels.Models;
 using OrukModels.SchemaOrg;
-using OrukTransformer.Cli.Output;
 using OrukTransformer.Core.Mapping;
 using OrukTransformer.Core.Vodim;
 
-namespace OrukTransformer.Cli.Tests;
+namespace OrukTransformer.Core.Tests.Mapping;
 
 /// <summary>
 /// Tests for <see cref="JsonLdMerger"/>.
