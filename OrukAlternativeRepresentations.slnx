@@ -11,6 +11,7 @@
     <Project Path="src/OrukTransformer.Cli/OrukTransformer.Cli.csproj" />
     <Project Path="src/OrukTransformer.Core.Tests/OrukTransformer.Core.Tests.csproj" />
     <Project Path="src/OrukTransformer.Core/OrukTransformer.Core.csproj" />
+    <Project Path="src/OrukTransformer.Mcp.Tests/OrukTransformer.Mcp.Tests.csproj" />
     <Project Path="src/OrukTransformer.Mcp/OrukTransformer.Mcp.csproj">
       <Build Solution="Debug|*" Project="false" />
     </Project>

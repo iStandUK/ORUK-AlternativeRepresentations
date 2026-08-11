@@ -80,6 +80,7 @@ public sealed class OrukServiceClient : IOrukServiceClient
         Uri? rpdeNextUrl = null;
         int currentPage = 1;
         int pagesFetched = 0;
+        int harvested = 0;
         bool firstPage = true;
 
         while (remaining > 0)
@@ -88,10 +89,14 @@ public sealed class OrukServiceClient : IOrukServiceClient
 
             if (pagesFetched >= MaxPages)
             {
+                // Hitting the cap means the harvest is truncated, not that the feed ended.
+                // Alert with the record-count framing so it is not mistaken for a clean finish.
                 _logger.LogWarning(
-                    "Reached {MaxPages}-page safety cap at {BaseUrl}. Stopping pagination.",
-                    MaxPages, OrukUrlBuilder.EnsureBase(feedBaseUrl));
-                break;
+                    "Harvest of {Feed} hit the safety cap of {MaxPages} pages (~{MaxRecords} records) " +
+                    "after {Harvested} record(s). The feed may contain more records that were not " +
+                    "fetched — data is incomplete.",
+                    OrukUrlBuilder.EnsureBase(feedBaseUrl), MaxPages, MaxPages * MaxPageSize, harvested);
+                yield break;
             }
 
             Uri url;
@@ -171,7 +176,18 @@ public sealed class OrukServiceClient : IOrukServiceClient
 
             pagesFetched++;
 
-            if (page is null || page.Contents.Count == 0)
+            // Distinguish a genuinely empty page (end of data) from a page whose records were
+            // dropped as malformed: the raw item count is the harvested records plus any that
+            // were skipped during deserialization.
+            var rawItemCount = page is null ? 0 : page.Contents.Count + page.MalformedItemCount;
+
+            if (page is { MalformedItemCount: > 0 })
+                _logger.LogWarning(
+                    "Page {Page} from {Url}: skipped {Dropped} malformed record(s) of {Raw}; " +
+                    "harvested the remaining {Kept}. Data may be incomplete.",
+                    currentPage, url, page.MalformedItemCount, rawItemCount, page.Contents.Count);
+
+            if (page is null || rawItemCount == 0)
             {
                 if (firstPage && !triedServicesSuffixFallback)
                 {
@@ -206,9 +222,16 @@ public sealed class OrukServiceClient : IOrukServiceClient
                     continue;
                 }
 
-                _logger.LogDebug(
-                    "Page {Page} returned no contents after {Fetched} page(s). Stopping.",
-                    currentPage, pagesFetched);
+                // A null page is a parse failure, not a legitimate end-of-data. Surface it as a
+                // warning so a truncated harvest is not mistaken for a feed that simply ended;
+                // an actually-empty page is a clean completion, logged as such.
+                if (page is null && !firstPage)
+                    _logger.LogWarning(
+                        "Stopping harvest of {Url} at page {Page}: the page could not be parsed, " +
+                        "so any remaining pages were not fetched. Data may be incomplete.",
+                        url, currentPage);
+                else
+                    LogHarvestComplete(feedBaseUrl, harvested, pagesFetched);
                 yield break;
             }
 
@@ -235,7 +258,12 @@ public sealed class OrukServiceClient : IOrukServiceClient
 
             foreach (var service in page!.Contents)
             {
-                if (remaining <= 0) yield break;
+                if (remaining <= 0)
+                {
+                    // The caller's requested record limit was reached — a clean, expected stop.
+                    LogHarvestComplete(feedBaseUrl, harvested, pagesFetched);
+                    yield break;
+                }
 
                 if (!MatchesClientSideFilters(service, query))
                     continue;
@@ -248,6 +276,7 @@ public sealed class OrukServiceClient : IOrukServiceClient
 
                 yield return service;
                 remaining--;
+                harvested++;
             }
 
             advance:
@@ -269,16 +298,28 @@ public sealed class OrukServiceClient : IOrukServiceClient
                 // Use the "full page" heuristic to detect end-of-data.
                 // Some feeds always report total_pages: 1 (e.g. Open Sessions) so we cannot
                 // trust the reported value. A partial page (fewer items than pageSize) is the
-                // reliable end-of-feed signal.
-                if (page.Contents.Count < pageSize) break;
+                // reliable end-of-feed signal. The raw item count (including any records skipped
+                // as malformed) is used so that dropping a bad record does not look like the
+                // last page and truncate the harvest early.
+                if (rawItemCount < pageSize) break;
                 currentPage++;
             }
         }
 
-        _logger.LogDebug(
-            "Completed pagination for {BaseUrl}: {PagesFetched} page(s) fetched.",
-            OrukUrlBuilder.EnsureBase(feedBaseUrl), pagesFetched);
+        // Reached when the feed ends via the full-page heuristic (a partial final page) or the
+        // record limit falls exactly on a page boundary — both clean completions.
+        LogHarvestComplete(feedBaseUrl, harvested, pagesFetched);
     }
+
+    /// <summary>
+    /// Emits a positive, distinguishable end-of-harvest signal at information level. A clean
+    /// completion logs this; a truncated harvest (parse failure, safety cap) logs a warning
+    /// instead — so an incomplete result is never mistaken for a feed that simply ended.
+    /// </summary>
+    private void LogHarvestComplete(Uri feedBaseUrl, int harvested, int pagesFetched) =>
+        _logger.LogInformation(
+            "Harvest of {Feed} complete: {Harvested} record(s) over {Pages} page(s).",
+            OrukUrlBuilder.EnsureBase(feedBaseUrl), harvested, pagesFetched);
 
     /// <inheritdoc/>
     public async Task<OrukService?> GetByIdAsync(

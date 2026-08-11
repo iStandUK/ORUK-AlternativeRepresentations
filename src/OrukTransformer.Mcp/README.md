@@ -23,6 +23,7 @@ Service and organisation narrative fields are normalised to plain text before be
 | `find_accessible_services` | Find services with a specific accessibility feature (e.g. wheelchair access, hearing loop). |
 | `find_services_by_delivery_type` | Find services filtered by delivery type: physical, virtual (online/phone), or postal. |
 | `get_services_updated_since` | Find services added or updated since a given date — useful for monitoring new provision. |
+| `enumerate_services` | Exhaustively page through every service in one feed (no filters, no result cap) for auditing, counting, or export. |
 | `search_organisations` | Search for organisations (charities, councils, NHS bodies) that deliver services. |
 | `get_organisation_detail` | Full profile of an organisation — description, contacts, website, legal status, services. |
 | `get_service_jsonld` | Transform a service (or a sample of a feed) into Schema.org JSON-LD — a `@graph` of `GovernmentService`, `Organization`, and `Place` nodes. Accepts `serviceId` (single service) and `maxRecords`. |
@@ -130,6 +131,7 @@ OrukTransformer.Mcp/
     ├── OrukRequiredDocumentsTool.cs   # get_required_documents MCP tool
     ├── OrukServiceFilterTool.cs       # get_services_by_language / find_accessible_services / find_services_by_delivery_type
     ├── OrukRecentlyUpdatedTool.cs     # get_services_updated_since MCP tool
+    ├── OrukServiceEnumerationTool.cs  # enumerate_services MCP tool
     ├── OrukOrganizationTool.cs        # search_organisations / get_organisation_detail MCP tools
     ├── OrukJsonLdTool.cs              # get_service_jsonld MCP tool
     └── OrukDataQualityTool.cs         # get_data_quality_report MCP tool

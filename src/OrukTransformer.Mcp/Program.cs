@@ -85,6 +85,7 @@ builder.Services
     .WithTools<OrukRequiredDocumentsTool>()
     .WithTools<OrukServiceFilterTool>()
     .WithTools<OrukRecentlyUpdatedTool>()
+    .WithTools<OrukServiceEnumerationTool>()
     .WithTools<OrukOrganizationTool>()
     .WithTools<OrukJsonLdTool>()
     .WithTools<OrukDataQualityTool>();
