@@ -1,0 +1,623 @@
+{
+ "name": "oruk-esd-lexical-rules",
+ "version": "2.0.0",
+ "generated": "2026-07-21",
+ "target_codesystems": {
+  "service": {
+   "url": "http://id.esd.org.uk/service",
+   "version": "2026-07-08"
+  },
+  "function": {
+   "url": "http://id.esd.org.uk/function",
+   "version": "2026-07-08"
+  }
+ },
+ "evidence_feeds": [
+  "bristol",
+  "shropshire",
+  "northlincs"
+ ],
+ "match_mode_default": "first-match",
+ "fallback": {
+  "id": "r-fallback",
+  "esd_service": "297",
+  "esd_function": "4",
+  "confidence": 0.4,
+  "label": "Community support (fallback)"
+ },
+ "rules": [
+  {
+   "id": "r001",
+   "pattern": "food ?bank|food parcel|food pantry|community (fridge|pantry|larder)|emergency food",
+   "esd_service": "1818",
+   "esd_function": "4",
+   "confidence": 0.9,
+   "label": "Food banks",
+   "origin": "v1-northlincs"
+  },
+  {
+   "id": "r002",
+   "pattern": "young carer",
+   "esd_service": "300",
+   "esd_function": "61",
+   "confidence": 0.9,
+   "label": "Young carers support",
+   "origin": "v1-northlincs"
+  },
+  {
+   "id": "r003",
+   "pattern": "\\bcarers?\\b|caring for|unpaid carer",
+   "esd_service": "298",
+   "esd_function": "61",
+   "confidence": 0.88,
+   "label": "Carers support groups",
+   "origin": "v1-northlincs"
+  },
+  {
+   "id": "r004",
+   "pattern": "domestic (abuse|violence)|\\bvictim|sexual (abuse|violence)|safeguard|hate crime",
+   "esd_service": "1816",
+   "esd_function": "16",
+   "confidence": 0.82,
+   "label": "Victim support",
+   "origin": "v1-northlincs"
+  },
+  {
+   "id": "r005",
+   "pattern": "suicide|\\bmental health\\b|depression|anxiety|self.?harm|emotional (health|wellbeing) (support|team)|counsel",
+   "esd_service": "1284",
+   "esd_function": "65",
+   "confidence": 0.8,
+   "label": "Mental health support",
+   "origin": "v1-northlincs"
+  },
+  {
+   "id": "r006",
+   "pattern": "\\bdrug|alcohol|substance|smoking|stop smoking|addiction|recovery (group|service)",
+   "esd_service": "730",
+   "esd_function": "65",
+   "confidence": 0.82,
+   "label": "Drugs/alcohol advice and support",
+   "origin": "v1-northlincs"
+  },
+  {
+   "id": "r007",
+   "pattern": "dementia|alzheimer|memory (cafe|caf\u00e9|group|loss)",
+   "esd_service": "1807",
+   "esd_function": "59",
+   "confidence": 0.82,
+   "label": "Health support groups (dementia)",
+   "origin": "v1-northlincs"
+  },
+  {
+   "id": "r008",
+   "pattern": "hospice|palliative|end of life",
+   "esd_service": "293",
+   "esd_function": "59",
+   "confidence": 0.85,
+   "label": "Adult hospice care",
+   "origin": "v1-northlincs"
+  },
+  {
+   "id": "r009",
+   "pattern": "bereave|grief|loss support|widow",
+   "esd_service": "328",
+   "esd_function": "65",
+   "confidence": 0.8,
+   "label": "Bereavement support",
+   "origin": "v1-northlincs"
+  },
+  {
+   "id": "r010",
+   "pattern": "breastfeed|breast feeding|antenatal|ante natal|midwife|midwifery|infant feeding|health visitor",
+   "esd_service": "927",
+   "esd_function": "63",
+   "confidence": 0.82,
+   "label": "Midwifery and maternity services",
+   "origin": "v1-northlincs"
+  },
+  {
+   "id": "r011",
+   "pattern": "autism|autistic|asperger|\\bsen\\b|\\bsend\\b|special educational needs|sendiass|\\baset\\b|learning disabilit",
+   "esd_service": "297",
+   "esd_function": "59",
+   "confidence": 0.7,
+   "label": "Community support (disability/SEN)",
+   "origin": "v1-northlincs"
+  },
+  {
+   "id": "r012",
+   "pattern": "register (a )?(birth|death)|birth registration|death registration|notice of marriage|marriage or civil|civil partnership|registrar",
+   "esd_service": "1716",
+   "esd_function": "54",
+   "confidence": 0.85,
+   "label": "Registration services",
+   "origin": "v1-northlincs"
+  },
+  {
+   "id": "r013",
+   "pattern": "\\bbenefit|\\bdebt\\b|money advice|universal credit|citizens advice|cost of living|budgeting|welfare rights|financial (support|advice|assistance)|pension credit",
+   "esd_service": "190",
+   "esd_function": "3",
+   "confidence": 0.8,
+   "label": "Benefits advice and assessment",
+   "origin": "v1-northlincs"
+  },
+  {
+   "id": "r014",
+   "pattern": "homeless|rough sleep|housing (advice|support|options)|tenanc|\\brent\\b|eviction|shelter",
+   "esd_service": "652",
+   "esd_function": "66",
+   "confidence": 0.8,
+   "label": "Housing advice",
+   "origin": "v1-northlincs"
+  },
+  {
+   "id": "r015",
+   "pattern": "volunteer",
+   "esd_service": "1113",
+   "esd_function": "57",
+   "confidence": 0.78,
+   "label": "Volunteering",
+   "origin": "v1-northlincs"
+  },
+  {
+   "id": "r016",
+   "pattern": "employ|\\bjob\\b|jobs|career|apprentic|\\bcv\\b|back to work|job club|work club",
+   "esd_service": "343",
+   "esd_function": "10",
+   "confidence": 0.78,
+   "label": "Employment and training initiatives",
+   "origin": "v1-northlincs"
+  },
+  {
+   "id": "r017",
+   "pattern": "community transport|dial.?a.?ride|shopmobility|bus pass|concessionary travel",
+   "esd_service": "272",
+   "esd_function": "105",
+   "confidence": 0.8,
+   "label": "Community and accessible transport",
+   "origin": "v1-northlincs"
+  },
+  {
+   "id": "r018",
+   "pattern": "toddler|stay and play|family hub|childminder|\\bnursery\\b|early years|playgroup|play group|under ?5|pre.?school|parent(s| )|baby (group|massage|sign|sensory|yoga|club)|baby and|tummy time|weaning",
+   "esd_service": "831",
+   "esd_function": "63",
+   "confidence": 0.72,
+   "label": "Family support groups and organisations",
+   "origin": "v1-northlincs"
+  },
+  {
+   "id": "r019",
+   "pattern": "\\byouth\\b|young people|teenager|scouts?|guides?|cadets|brownies|guiding|11-1[0-9]|boys.? brigade|air cadet",
+   "esd_service": "643",
+   "esd_function": "63",
+   "confidence": 0.75,
+   "label": "Young people's organised activities",
+   "origin": "v1-northlincs"
+  },
+  {
+   "id": "r020",
+   "pattern": "older people|elderly|\\bsenior|over ?(50|55|60|65)|retire|pensioner|aged (50|55|60|65)|later life",
+   "esd_service": "640",
+   "esd_function": "59",
+   "confidence": 0.75,
+   "label": "Activities for older people",
+   "origin": "v1-northlincs"
+  },
+  {
+   "id": "r021",
+   "pattern": "\\bwalk(ing|s|ers)?\\b|ramble|\\bhike|\\btrail\\b|nordic walk|health walk",
+   "esd_service": "1793",
+   "esd_function": "75",
+   "confidence": 0.78,
+   "label": "Outdoor activities (walking)",
+   "origin": "v1-northlincs"
+  },
+  {
+   "id": "r022",
+   "pattern": "swim|aqua|water based|pool",
+   "esd_service": "1674",
+   "esd_function": "80",
+   "confidence": 0.82,
+   "label": "Swimming and water based activities",
+   "origin": "v1-northlincs"
+  },
+  {
+   "id": "r023",
+   "pattern": "bowls|football|cricket|tennis|rugby|netball|hockey|athletic|angling|fishing|golf|darts|snooker|billiard|archery|\\bsport|running club|parkrun|cycling|badminton|table tennis|climbing|gymnastic",
+   "esd_service": "641",
+   "esd_function": "80",
+   "confidence": 0.8,
+   "label": "Sports clubs and groups",
+   "origin": "v1-northlincs"
+  },
+  {
+   "id": "r024",
+   "pattern": "\\byoga|pilates|zumba|aerobic|fitness|keep fit|tai chi|exercise|\\bgym\\b|circuit|body ?combat|spin class|wellbeing walk|chair based|strength and balance",
+   "esd_service": "1789",
+   "esd_function": "80",
+   "confidence": 0.78,
+   "label": "Exercise and fitness classes",
+   "origin": "v1-northlincs"
+  },
+  {
+   "id": "r025",
+   "pattern": "\\bdance|dancing|ballet|ballroom|line danc|tap class|zumba",
+   "esd_service": "1791",
+   "esd_function": "73",
+   "confidence": 0.72,
+   "label": "Arts and creative classes (dance)",
+   "origin": "v1-northlincs"
+  },
+  {
+   "id": "r026",
+   "pattern": "\\bart\\b|\\barts\\b|craft|paint|pottery|\\bknit|crochet|sew(ing|)|wood ?carv|creative|drawing|embroider|quilt|needle|calligraphy|card making|scrapbook",
+   "esd_service": "1791",
+   "esd_function": "73",
+   "confidence": 0.78,
+   "label": "Arts and creative classes",
+   "origin": "v1-northlincs"
+  },
+  {
+   "id": "r027",
+   "pattern": "music|choir|sing(ing|)|\\bband\\b|orchestra|ukulele|guitar|\\bpiano\\b|recording studio|drumming|brass|folk session",
+   "esd_service": "1791",
+   "esd_function": "73",
+   "confidence": 0.72,
+   "label": "Arts and creative classes (music)",
+   "origin": "v1-northlincs"
+  },
+  {
+   "id": "r028",
+   "pattern": "museum|gallery|heritage|\\bhistory\\b|historical|exhibition|archive|archaeolog",
+   "esd_service": "620",
+   "esd_function": "78",
+   "confidence": 0.8,
+   "label": "Museums and galleries",
+   "origin": "v1-northlincs"
+  },
+  {
+   "id": "r029",
+   "pattern": "\\blibrary\\b|libraries|reading group|book group|book club|story ?time|rhyme ?time",
+   "esd_service": "437",
+   "esd_function": "76",
+   "confidence": 0.78,
+   "label": "Library facilities",
+   "origin": "v1-northlincs"
+  },
+  {
+   "id": "r030",
+   "pattern": "u3a|adult (education|learning|and community)|\\bcourse\\b|workshop|\\besol\\b|english class|computer|digital skills|\\bit skills\\b|\\bclass(es)?\\b|learn to|lifelong learning|numeracy|literacy",
+   "esd_service": "27",
+   "esd_function": "24",
+   "confidence": 0.68,
+   "label": "Adult education and learning",
+   "origin": "v1-northlincs"
+  },
+  {
+   "id": "r031",
+   "pattern": "church|parish|\\bfaith\\b|mosque|worship|christian|\\bprayer|chapel|cathedral|methodist|baptist|catholic|\\bmass\\b|bible",
+   "esd_service": "1813",
+   "esd_function": "79",
+   "confidence": 0.75,
+   "label": "Faith organisations and services",
+   "origin": "v1-northlincs"
+  },
+  {
+   "id": "r032",
+   "pattern": "allotment|\\bgarden|conservation|wildlife|\\bnature|country park|woodland|forest|\\bpark\\b|green space|environment|biodivers",
+   "esd_service": "461",
+   "esd_function": "36",
+   "confidence": 0.72,
+   "label": "Parks and open spaces",
+   "origin": "v1-northlincs"
+  },
+  {
+   "id": "r033",
+   "pattern": "\\bmarket\\b|business (support|advice)|enterprise|traders|start.?up|self.?employ",
+   "esd_service": "349",
+   "esd_function": "6",
+   "confidence": 0.68,
+   "label": "Advice to businesses and voluntary organisations",
+   "origin": "v1-northlincs"
+  },
+  {
+   "id": "r034",
+   "pattern": "festival|\\bfair\\b|\\bgala\\b|carnival|\\bfete\\b|what'?s on|day out|visit|attraction|touris|open day|christmas (market|fair)",
+   "esd_service": "733",
+   "esd_function": "72",
+   "confidence": 0.62,
+   "label": "Local attractions and facilities",
+   "origin": "v1-northlincs"
+  },
+  {
+   "id": "r035",
+   "pattern": "coffee morning|lunch club|luncheon|friendship|social (group|club)|\\bnatter\\b|warm (space|hub|room)|community (cafe|caf\u00e9)|men'?s shed|drop.?in|community living room|tea and|brew|chat",
+   "esd_service": "1806",
+   "esd_function": "75",
+   "confidence": 0.62,
+   "label": "Social clubs and groups",
+   "origin": "v1-northlincs"
+  },
+  {
+   "id": "r036",
+   "pattern": "community (hub|centre|center)|village hall|town hall|community building|community works|parish hall|memorial hall",
+   "esd_service": "1149",
+   "esd_function": "62",
+   "confidence": 0.65,
+   "label": "Community centres",
+   "origin": "v1-northlincs"
+  },
+  {
+   "id": "r037",
+   "pattern": "health check|health (advice|support|service)|\\bgp\\b|\\bclinic\\b|physio|\\btherapy\\b|wellbeing|healthy|nhs|hospital|nurse|first aid|falls prevention",
+   "esd_service": "199",
+   "esd_function": "65",
+   "confidence": 0.55,
+   "label": "Health advice / support",
+   "origin": "v1-northlincs"
+  },
+  {
+   "id": "r038",
+   "pattern": "neighbourhood watch|home ?watch",
+   "esd_service": "870",
+   "esd_function": "21",
+   "confidence": 0.92,
+   "label": "Community safety (Neighbourhood Watch)",
+   "origin": "v2-bristol-shropshire",
+   "notes": "Shropshire: ~170 Neighbourhood Watch schemes"
+  },
+  {
+   "id": "r039",
+   "pattern": "samaritans|helpline|listening service|emotional support (line|service)|crisis (line|support|team)",
+   "esd_service": "1284",
+   "esd_function": "65",
+   "confidence": 0.8,
+   "label": "Mental health support (helplines)",
+   "origin": "v2-bristol-shropshire",
+   "notes": "Bristol: Samaritans etc."
+  },
+  {
+   "id": "r040",
+   "pattern": "relationship (support|counselling)|\\brelate\\b|couples counselling|mediation",
+   "esd_service": "163",
+   "esd_function": "65",
+   "confidence": 0.78,
+   "label": "Counselling (relationships)",
+   "origin": "v2-bristol-shropshire",
+   "notes": "Relate and similar"
+  },
+  {
+   "id": "r041",
+   "pattern": "home ?care|domiciliary|care at home|live.?in care|care (team|agency|workers?)|independent living|homecare",
+   "esd_service": "242",
+   "esd_function": "148",
+   "confidence": 0.8,
+   "label": "Care at home",
+   "origin": "v2-bristol-shropshire",
+   "notes": "Bristol: many home-care providers"
+  },
+  {
+   "id": "r042",
+   "pattern": "day centre|day center|day service",
+   "esd_service": "296",
+   "esd_function": "59",
+   "confidence": 0.85,
+   "label": "Day centres",
+   "origin": "v2-bristol-shropshire",
+   "notes": "Shropshire day centres"
+  },
+  {
+   "id": "r043",
+   "pattern": "patient transport|ambulance|hospital transport|medical transport",
+   "esd_service": "272",
+   "esd_function": "105",
+   "confidence": 0.8,
+   "label": "Community and accessible transport (patient)",
+   "origin": "v2-bristol-shropshire",
+   "notes": "NEPTS etc."
+  },
+  {
+   "id": "r044",
+   "pattern": "rail ?card|bus pass|concession(ary)? (fare|travel)|travel (pass|card)",
+   "esd_service": "221",
+   "esd_function": "105",
+   "confidence": 0.85,
+   "label": "Rail cards / travel concessions",
+   "origin": "v2-bristol-shropshire",
+   "notes": "Shropshire railcards"
+  },
+  {
+   "id": "r045",
+   "pattern": "\\bhiv\\b|\\baids\\b|terrence higgins",
+   "esd_service": "202",
+   "esd_function": "65",
+   "confidence": 0.85,
+   "label": "HIV / AIDS support",
+   "origin": "v2-bristol-shropshire",
+   "notes": "condition-specific"
+  },
+  {
+   "id": "r046",
+   "pattern": "cancer|macmillan|marie curie|leukaemia|lymphoma",
+   "esd_service": "1807",
+   "esd_function": "64",
+   "confidence": 0.8,
+   "label": "Health support groups (cancer)",
+   "origin": "v2-bristol-shropshire",
+   "notes": "condition charities"
+  },
+  {
+   "id": "r047",
+   "pattern": "(syndrome|disease|disorder|condition|diabetes|thyroid|stroke|epilep|arthritis|parkinson|dementia|autoimmune|allerg|asthma|coeliac|crohn|colitis|cystic fibrosis|muscular dystrophy|sclerosis)s? (foundation|society|association|trust|support|network|uk|charity|group)|patient organisation",
+   "esd_service": "1807",
+   "esd_function": "64",
+   "confidence": 0.72,
+   "label": "Health support groups (condition-specific)",
+   "origin": "v2-bristol-shropshire",
+   "notes": "national condition charities"
+  },
+  {
+   "id": "r048",
+   "pattern": "blood pressure|health (screening|mot)|nhs health check",
+   "esd_service": "1747",
+   "esd_function": "65",
+   "confidence": 0.85,
+   "label": "Health checks",
+   "origin": "v2-bristol-shropshire",
+   "notes": "NL residual: blood-pressure checks"
+  },
+  {
+   "id": "r049",
+   "pattern": "menopause|women'?s health|maternity|postnatal|post-natal|perinatal",
+   "esd_service": "927",
+   "esd_function": "64",
+   "confidence": 0.7,
+   "label": "Maternity and women's health",
+   "origin": "v2-bristol-shropshire",
+   "notes": "Bristol menopause sessions"
+  },
+  {
+   "id": "r050",
+   "pattern": "chiropod|podiatr|osteopath|chiropract|acupunctur|reflexolog|massage therap|complementary therap|holistic",
+   "esd_service": "1803",
+   "esd_function": "64",
+   "confidence": 0.78,
+   "label": "Alternative therapies and treatments",
+   "origin": "v2-bristol-shropshire",
+   "notes": "private practitioners"
+  },
+  {
+   "id": "r051",
+   "pattern": "deaf|blind|sight loss|hearing loss|sensory (loss|impair)|\\bbsl\\b|braille",
+   "esd_service": "205",
+   "esd_function": "59",
+   "confidence": 0.75,
+   "label": "Specialist support for disabled people (sensory)",
+   "origin": "v2-bristol-shropshire",
+   "notes": "Deafblind UK etc."
+  },
+  {
+   "id": "r052",
+   "pattern": "disabled (people|adults|children)|disability (charity|support|service|network)|scope\\b|physically disabled|wheelchair",
+   "esd_service": "204",
+   "esd_function": "59",
+   "confidence": 0.72,
+   "label": "Independence support for disabled people",
+   "origin": "v2-bristol-shropshire",
+   "notes": "disability charities"
+  },
+  {
+   "id": "r053",
+   "pattern": "fencing|martial art|judo|karate|taekwondo|boxing|kickbox|jiu.?jitsu|squash|rowing|sailing|canoe|kayak|equestrian|horse riding|shooting|triathlon|skate|curling|lacrosse|volleyball|basketball",
+   "esd_service": "641",
+   "esd_function": "80",
+   "confidence": 0.8,
+   "label": "Sports clubs and groups (extended)",
+   "origin": "v2-bristol-shropshire",
+   "notes": "sports missed by v1"
+  },
+  {
+   "id": "r054",
+   "pattern": "theatre|panto|cinema|comedy|concert|live (music|show)|\\bshow\\b at|box office",
+   "esd_service": "838",
+   "esd_function": "73",
+   "confidence": 0.7,
+   "label": "Arts organisations and events (performance)",
+   "origin": "v2-bristol-shropshire",
+   "notes": "Theatre Severn etc."
+  },
+  {
+   "id": "r055",
+   "pattern": "railway|steam train|heritage (railway|line)|preservation (society|trust)",
+   "esd_service": "733",
+   "esd_function": "77",
+   "confidence": 0.72,
+   "label": "Local attractions (heritage transport)",
+   "origin": "v2-bristol-shropshire",
+   "notes": "Tanat Valley etc."
+  },
+  {
+   "id": "r056",
+   "pattern": "parish council|town council|\\bcouncillor",
+   "esd_service": "723",
+   "esd_function": "50",
+   "confidence": 0.85,
+   "label": "Parish/town councils",
+   "origin": "v2-bristol-shropshire",
+   "notes": "civic"
+  },
+  {
+   "id": "r057",
+   "pattern": "(primary|secondary|high|junior|infant|first|middle|grammar|ce|rc|academy|preparatory) school\\b|school academy|multi.?academy",
+   "esd_service": "1819",
+   "esd_function": "28",
+   "confidence": 0.6,
+   "label": "Schools (education provision)",
+   "origin": "v2-bristol-shropshire",
+   "notes": "Shropshire school entries"
+  },
+  {
+   "id": "r058",
+   "pattern": "farm(ers|ing)?|landowner|rural business|agricultur|smallholding",
+   "esd_service": "349",
+   "esd_function": "33",
+   "confidence": 0.65,
+   "label": "Rural/business advice",
+   "origin": "v2-bristol-shropshire",
+   "notes": "CLA etc."
+  },
+  {
+   "id": "r059",
+   "pattern": "gypsy|traveller|roma\\b",
+   "esd_service": "737",
+   "esd_function": "63",
+   "confidence": 0.75,
+   "label": "Traveller support",
+   "origin": "v2-bristol-shropshire",
+   "notes": "Travellers' Times"
+  },
+  {
+   "id": "r060",
+   "pattern": "armed forces|veteran|\\brbl\\b|royal british legion|ssafa",
+   "esd_service": "297",
+   "esd_function": "4",
+   "confidence": 0.75,
+   "label": "Community support (veterans)",
+   "origin": "v2-bristol-shropshire",
+   "notes": "service community"
+  },
+  {
+   "id": "r061",
+   "pattern": "food (hygiene|safety) |trading standards|consumer (advice|protection)",
+   "esd_service": "349",
+   "esd_function": "15",
+   "confidence": 0.65,
+   "label": "Trading standards / consumer (business advice)",
+   "origin": "v2-bristol-shropshire",
+   "notes": "regulatory; no dedicated consumer-protection Service concept \u2014 itself a vocabulary-gap note"
+  },
+  {
+   "id": "r062",
+   "pattern": "speech and language|communication needs|\\bsalt\\b team",
+   "esd_service": "297",
+   "esd_function": "63",
+   "confidence": 0.7,
+   "label": "Children's communication support",
+   "origin": "v2-bristol-shropshire",
+   "notes": "Speech and Language UK"
+  },
+  {
+   "id": "r063",
+   "pattern": "home (from )?hospital|discharge (support|service)|reablement",
+   "esd_service": "833",
+   "esd_function": "150",
+   "confidence": 0.8,
+   "label": "Leaving hospital / reablement",
+   "origin": "v2-bristol-shropshire",
+   "notes": "Bristol/Shropshire discharge services"
+  }
+ ]
+}
