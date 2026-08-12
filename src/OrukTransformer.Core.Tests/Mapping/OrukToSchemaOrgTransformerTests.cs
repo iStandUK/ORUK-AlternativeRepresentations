@@ -375,6 +375,44 @@ public class OrukToSchemaOrgTransformerTests
         Assert.Equal(VodimClassification.Missing, rec?.Classification);
     }
 
+    [Theory]
+    [InlineData("21514811-b4c3-4eca-9baa-47ff98a35989")] // canonical lowercase
+    [InlineData("21514811-B4C3-4ECA-9BAA-47FF98A35989")] // canonical uppercase — case is not a defect
+    public void Transform_CanonicalUuidId_RecordsValid(string id)
+    {
+        var result = _sut.Transform(MinimalService(id: id), _opts);
+        var rec = FindRecord(result.Report, "service.id");
+
+        Assert.Equal(VodimClassification.Valid, rec?.Classification);
+    }
+
+    [Theory]
+    [InlineData("BF01FA8-09B3-4DE0-87BE-939101B7EE1F", "malformed UUID")] // Dorset stripped leading zero
+    [InlineData("2830", "integer")]                                        // e.g. Buckinghamshire
+    [InlineData("food-bank-2", "slug")]
+    [InlineData("https://example.org/services/1", "URL")]
+    [InlineData("some free text", "string")]
+    public void Transform_NonUuidId_RecordsInvalid_NamingTheKind(string id, string expectedKind)
+    {
+        // Strictly, ORUK identifiers should be RFC 4122 UUIDs. A non-UUID id is Invalid, and the
+        // report names the kind of value to aid diagnosis.
+        var result = _sut.Transform(MinimalService(id: id), _opts);
+        var rec = FindRecord(result.Report, "service.id");
+
+        Assert.Equal(VodimClassification.Invalid, rec?.Classification);
+        Assert.Contains(expectedKind, rec?.Note);
+    }
+
+    [Fact]
+    public void Transform_NonUuidId_IsStillCarriedThroughToTheAtId()
+    {
+        // Invalid classification records the defect, but the node must still have its identifier.
+        var result = _sut.Transform(MinimalService(id: "BF01FA8-09B3-4DE0-87BE-939101B7EE1F"), _opts);
+        var node = result.Document.Graph.OfType<SchemaOrgGovernmentService>().Single();
+
+        Assert.Contains("BF01FA8-09B3-4DE0-87BE-939101B7EE1F", node.Id);
+    }
+
     [Fact]
     public void Transform_AnyStringFieldAsJsonObject_RecordsInvalid()
     {
