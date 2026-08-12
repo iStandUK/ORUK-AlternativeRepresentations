@@ -152,11 +152,12 @@ public sealed partial class OrukToSchemaOrgTransformer : IOrukToSchemaOrgTransfo
 
         // status → additionalProperty[orukStatus]
         var (statusClass, statusNote) = ClassifyOrukStatus(service.Status);
+        // The raw status is emitted to additionalProperty[orukStatus] whenever present (see
+        // BuildServiceAdditionalProperties), so the mapped value is the status itself even when
+        // it is Invalid (unrecognized vocabulary) — the classification records the defect, the
+        // value is still carried through.
         Record(report, "service.status", "GovernmentService.additionalProperty[orukStatus]",
-            statusClass, service.Status,
-            statusClass is VodimClassification.Valid or VodimClassification.Other
-                ? service.Status : null,
-            statusNote);
+            statusClass, service.Status, service.Status, statusNote);
 
         // interpretation_services — VODIM recorded inside MapLanguagesWithFallback
         // once we know whether the fallback is needed (structured languages take priority).
@@ -191,7 +192,7 @@ public sealed partial class OrukToSchemaOrgTransformer : IOrukToSchemaOrgTransfo
         Record(report, "service.wait_time", "GovernmentService.additionalProperty[waitTime]",
             string.IsNullOrEmpty(service.WaitTime)
                 ? VodimClassification.Missing
-                : VodimClassification.Other,
+                : VodimClassification.Valid,
             service.WaitTime, service.WaitTime,
             service.WaitTime is not null ? "Deprecated HSDS field. Preserved in additionalProperty." : null);
 
@@ -382,7 +383,7 @@ public sealed partial class OrukToSchemaOrgTransformer : IOrukToSchemaOrgTransfo
             urlClass == VodimClassification.Valid ? effectiveUrl : null, urlNote);
         if (org.Url is null && org.Website is not null)
             Record(report, "organization.website", "Organization.url",
-                VodimClassification.Other, org.Website, org.Website,
+                VodimClassification.Valid, org.Website, org.Website,
                 "Non-standard 'website' field used as fallback for 'url'.");
 
         // legal_status → additionalProperty[legalStatus]
@@ -559,7 +560,7 @@ public sealed partial class OrukToSchemaOrgTransformer : IOrukToSchemaOrgTransfo
             Classify(address.Address1), address.Address1, address.Address1);
         Record(report, $"{prefix}.address_2", "Place.address.streetAddress",
             string.IsNullOrWhiteSpace(address.Address2)
-                ? VodimClassification.Missing : VodimClassification.Other,
+                ? VodimClassification.Missing : VodimClassification.Valid,
             address.Address2, address.Address2,
             address.Address2 is not null
                 ? "address_2 concatenated with address_1 or omitted; no separate Schema.org property." : null);
@@ -716,9 +717,10 @@ public sealed partial class OrukToSchemaOrgTransformer : IOrukToSchemaOrgTransfo
             else if (LongDayToSchemaOrg.TryGetValue(stripped, out var longSchemaUri))
             {
                 Record(report, sourcePath, "OpeningHoursSpecification.dayOfWeek",
-                    VodimClassification.Other, token, longSchemaUri,
-                    $"Long-form day name '{token}' used instead of RRULE short-form.");
-                result.Add((longSchemaUri, VodimClassification.Other));
+                    VodimClassification.Invalid, token, longSchemaUri,
+                    $"Long-form day name '{token}' is not valid RRULE BYDAY short-form " +
+                    "(expected MO/TU/WE/…); mapped to the Schema.org day but the source is nonconformant.");
+                result.Add((longSchemaUri, VodimClassification.Invalid));
             }
             else
             {
@@ -943,7 +945,7 @@ public sealed partial class OrukToSchemaOrgTransformer : IOrukToSchemaOrgTransfo
         {
             // Structured languages produced valid output; interpretation_services is not used.
             Record(report, "service.interpretation_services", "GovernmentService.availableLanguage",
-                VodimClassification.Other, interpretationServices, null,
+                VodimClassification.Unmapped, interpretationServices, null,
                 "Superseded by service.languages collection; value not used in output.");
         }
         else
@@ -954,7 +956,7 @@ public sealed partial class OrukToSchemaOrgTransformer : IOrukToSchemaOrgTransfo
             {
                 result.Add(new SchemaOrgLanguage { Name = stripped });
                 Record(report, "service.interpretation_services", "GovernmentService.availableLanguage",
-                    VodimClassification.Other, interpretationServices, stripped,
+                    VodimClassification.Valid, interpretationServices, stripped,
                     string.Join(" ", new[]
                     {
                         "Mapped as free-text Language name. Prefer service.languages collection.",
@@ -1308,7 +1310,7 @@ public sealed partial class OrukToSchemaOrgTransformer : IOrukToSchemaOrgTransfo
             // Priority 3: keywords only
             Record(report, $"{termPrefix}.code", "Thing.keywords",
                 string.IsNullOrWhiteSpace(term.Code)
-                    ? VodimClassification.Missing : VodimClassification.Other,
+                    ? VodimClassification.Missing : VodimClassification.Valid,
                 term.Code, null,
                 "No resolvable URI; term name added to keywords only.");
         }
@@ -1385,7 +1387,7 @@ public sealed partial class OrukToSchemaOrgTransformer : IOrukToSchemaOrgTransfo
     /// slot rather than needing to coexist; a list (or an <c>additionalProperty</c> overflow) is
     /// therefore unnecessary. When both sources carry a value the structured
     /// <c>external_identifiers[UPRN]</c> entry wins and the scalar is recorded as
-    /// <see cref="VodimClassification.Other"/> (present but superseded, no mapped value) — mirroring
+    /// <see cref="VodimClassification.Unmapped"/> (present but superseded, not emitted) — mirroring
     /// how <c>interpretation_services</c> is reported when superseded by the structured
     /// <c>languages</c> collection. Whichever source is actually emitted is the only one classified
     /// <see cref="VodimClassification.Valid"/>, so VODIM never double-counts one emitted identifier.
@@ -1416,7 +1418,7 @@ public sealed partial class OrukToSchemaOrgTransformer : IOrukToSchemaOrgTransfo
                 Record(report, "location.uprn", target, VodimClassification.Missing);
             else
                 Record(report, "location.uprn", target,
-                    VodimClassification.Other, location.Uprn, null,
+                    VodimClassification.Unmapped, location.Uprn, null,
                     "Superseded by external_identifiers[UPRN]; value not used in output.");
 
             return new SchemaOrgPropertyValue
@@ -1610,7 +1612,7 @@ public sealed partial class OrukToSchemaOrgTransformer : IOrukToSchemaOrgTransfo
     {
         if (string.IsNullOrWhiteSpace(value)) return (VodimClassification.Missing, null);
         if (ValidOrukStatuses.Contains(value)) return (VodimClassification.Valid, null);
-        return (VodimClassification.Other,
+        return (VodimClassification.Invalid,
             $"'{value}' is not in the ORUK status vocabulary " +
             $"(active|inactive|defunct|temporarily closed).");
     }
@@ -1655,8 +1657,9 @@ public sealed partial class OrukToSchemaOrgTransformer : IOrukToSchemaOrgTransfo
     {
         if (value is null) return (VodimClassification.Missing, null, null);
         if (value == -1)
-            return (VodimClassification.Other,
-                $"{fieldName}=-1 is a common sentinel for 'no constraint' but is not standard ORUK.",
+            return (VodimClassification.Invalid,
+                $"{fieldName}=-1 is a common sentinel for 'no constraint' but is not standard ORUK; " +
+                "Schema.org suggestedMinAge/MaxAge must be ≥ 0.",
                 null);
         if (value < 0)
             return (VodimClassification.Invalid,
