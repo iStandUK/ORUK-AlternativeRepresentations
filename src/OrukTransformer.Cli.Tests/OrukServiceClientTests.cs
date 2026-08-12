@@ -154,6 +154,36 @@ public class OrukServiceClientTests
         Assert.DoesNotContain(log.Entries, e => e.Level == LogLevel.Information && e.Message.Contains("complete"));
     }
 
+    [Fact]
+    public async Task SearchAsync_ServerCapsPageSizeBelowRequest_StillPagesToTheEnd()
+    {
+        // The client requests per_page=100, but this server caps its page size at 2 (like
+        // Dorset, which returns 50 for a requested 100). The end-of-data heuristic must key off
+        // the server's observed page size, not the requested one — otherwise the first short
+        // page is mistaken for the last and the feed is silently truncated.
+        var feedBaseUrl = new Uri("https://example.org/aggregator/services");
+        var mock = new MockHttpMessageHandler();
+        mock.Fallback.Respond(HttpStatusCode.NotFound);
+
+        mock.When(HttpMethod.Get, feedBaseUrl.ToString()).WithQueryString("page", "1")
+            .Respond("application/json", MakePage(1, 3,
+                [new OrukService { Id = "s0" }, new OrukService { Id = "s1" }]));
+        mock.When(HttpMethod.Get, feedBaseUrl.ToString()).WithQueryString("page", "2")
+            .Respond("application/json", MakePage(2, 3,
+                [new OrukService { Id = "s2" }, new OrukService { Id = "s3" }]));
+        // A short final page (fewer than the server's own page size) is the real end signal.
+        mock.When(HttpMethod.Get, feedBaseUrl.ToString()).WithQueryString("page", "3")
+            .Respond("application/json", MakePage(3, 3, [new OrukService { Id = "s4" }]));
+
+        var client = CreateClient(mock.ToHttpClient());
+
+        var results = new List<OrukService>();
+        await foreach (var s in client.SearchAsync(feedBaseUrl, new OrukServiceQuery { MaxRecords = 0 }))
+            results.Add(s);
+
+        Assert.Equal(["s0", "s1", "s2", "s3", "s4"], results.Select(r => r.Id));
+    }
+
     private static OrukServiceClient CreateClient(HttpClient httpClient, ILogger<OrukServiceClient>? logger = null)
     {
         var geocoder = Substitute.For<IPostcodeGeocoder>();

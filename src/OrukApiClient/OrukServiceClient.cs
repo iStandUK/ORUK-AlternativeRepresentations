@@ -83,11 +83,20 @@ public sealed class OrukServiceClient : IOrukServiceClient
         int harvested = 0;
         bool firstPage = true;
 
+        // The server's actual page size, learned from the first full page. Some ORUK servers
+        // cap their page size below the requested per_page (e.g. Dorset returns 50 for a
+        // requested 100), so the end-of-data heuristic must compare against what the server
+        // returns, not what we asked for — otherwise the first short page looks like the last.
+        int effectivePageSize = pageSize;
+
         while (remaining > 0)
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            if (pagesFetched >= MaxPages)
+            // pagesFetched bounds successful pages; currentPage also bounds the page-number path
+            // defensively, so a feed that never signals its last page (and whose tail pages 404
+            // into the skip-and-continue path) cannot loop indefinitely.
+            if (pagesFetched >= MaxPages || currentPage > MaxPages)
             {
                 // Hitting the cap means the harvest is truncated, not that the feed ended.
                 // Alert with the record-count framing so it is not mistaken for a clean finish.
@@ -247,12 +256,16 @@ public sealed class OrukServiceClient : IOrukServiceClient
                 }
                 else
                 {
-                    // Log reported total_pages but do not trust it — some feeds always
-                    // report total_pages: 1 regardless of actual dataset size.
+                    // Learn the server's real page size from the first page rather than trusting
+                    // total_pages (some feeds always report total_pages: 1). This is the threshold
+                    // the end-of-data heuristic uses, so a server that caps below the requested
+                    // per_page still pages to the end.
+                    effectivePageSize = rawItemCount;
                     _logger.LogInformation(
-                        "Feed at {BaseUrl} reports {Total} total items, {Pages} page(s) " +
-                        "(using full-page heuristic to detect end of data).",
-                        OrukUrlBuilder.EnsureBase(feedBaseUrl), page.TotalItems, page.TotalPages);
+                        "Feed at {BaseUrl} reports {Total} total items, {Pages} page(s); server page " +
+                        "size is {PageSize} (using observed-page-size heuristic to detect end of data).",
+                        OrukUrlBuilder.EnsureBase(feedBaseUrl), page.TotalItems, page.TotalPages,
+                        effectivePageSize);
                 }
             }
 
@@ -295,13 +308,15 @@ public sealed class OrukServiceClient : IOrukServiceClient
             {
                 rpdeNextUrl = null;
 
-                // Use the "full page" heuristic to detect end-of-data.
-                // Some feeds always report total_pages: 1 (e.g. Open Sessions) so we cannot
-                // trust the reported value. A partial page (fewer items than pageSize) is the
-                // reliable end-of-feed signal. The raw item count (including any records skipped
-                // as malformed) is used so that dropping a bad record does not look like the
-                // last page and truncate the harvest early.
-                if (rawItemCount < pageSize) break;
+                // End-of-data detection. Prefer the server's own last-page flag, which is the
+                // authoritative signal and correctly handles a short first page (a feed smaller
+                // than one page). Fall back to a page shorter than the server's observed page size
+                // (learned from the first page, not the requested per_page) so we still page to the
+                // end when a server caps its page size below what we requested — and never mistake
+                // a full first page for the last. total_pages is not trusted (some feeds always
+                // report 1). rawItemCount includes records skipped as malformed, so dropping a bad
+                // record cannot look like the last page.
+                if (page.LastPage || rawItemCount < effectivePageSize) break;
                 currentPage++;
             }
         }
