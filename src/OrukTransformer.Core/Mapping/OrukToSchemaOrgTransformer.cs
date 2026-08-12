@@ -29,6 +29,9 @@ public sealed partial class OrukToSchemaOrgTransformer : IOrukToSchemaOrgTransfo
     /// </summary>
     private const double MaxPlausibleHumanAge = 130;
 
+    // Slug: alphanumeric segments joined by single hyphens/underscores (e.g. "food-bank-2").
+    private static readonly Regex SlugRegex = new(@"^[A-Za-z0-9]+([-_][A-Za-z0-9]+)*$");
+
     // ── ORUK vocabulary constants ────────────────────────────────────────────────
 
     private static readonly HashSet<string> ValidOrukStatuses =
@@ -116,7 +119,7 @@ public sealed partial class OrukToSchemaOrgTransformer : IOrukToSchemaOrgTransfo
         OrukService service, TransformationOptions options, TransformationReport report)
     {
         // @id
-        var serviceId = MapRequiredString(report,
+        var serviceId = MapRequiredIdentifier(report,
             "service.id", "GovernmentService.@id", service.Id);
         var serviceUri = serviceId is not null ? options.ServiceUri(serviceId) : null;
 
@@ -346,8 +349,8 @@ public sealed partial class OrukToSchemaOrgTransformer : IOrukToSchemaOrgTransfo
     {
         // @id
         var orgUri = options.OrganisationUri(org.Id);
-        Record(report, "organization.id", "Organization.@id",
-            VodimClassification.Valid, org.Id, orgUri);
+        var (orgIdClass, orgIdNote) = ClassifyIdentifier(org.Id);
+        Record(report, "organization.id", "Organization.@id", orgIdClass, org.Id, orgUri, orgIdNote);
 
         // name
         Record(report, "organization.name", "Organization.name",
@@ -453,7 +456,8 @@ public sealed partial class OrukToSchemaOrgTransformer : IOrukToSchemaOrgTransfo
         OrukLocation location, TransformationOptions options, TransformationReport report)
     {
         var locUri = options.LocationUri(location.Id);
-        Record(report, "location.id", "Place.@id", VodimClassification.Valid, location.Id, locUri);
+        var (locIdClass, locIdNote) = ClassifyIdentifier(location.Id);
+        Record(report, "location.id", "Place.@id", locIdClass, location.Id, locUri, locIdNote);
 
         Record(report, "location.name", "Place.name",
             Classify(location.Name), location.Name, location.Name);
@@ -1678,6 +1682,73 @@ public sealed partial class OrukToSchemaOrgTransformer : IOrukToSchemaOrgTransfo
         }
         Record(report, sourcePath, targetPath, VodimClassification.Valid, value, value);
         return value;
+    }
+
+    /// <summary>
+    /// Maps a required identifier to its <c>@id</c>. Like <see cref="MapRequiredString"/> but
+    /// routes a present value through <see cref="ClassifyIdentifier"/> so a malformed-UUID id is
+    /// flagged while still being carried through unchanged.
+    /// </summary>
+    private static string? MapRequiredIdentifier(
+        TransformationReport report, string sourcePath, string targetPath, string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            Record(report, sourcePath, targetPath, VodimClassification.Missing, null, null,
+                $"Required field '{sourcePath}' is absent.");
+            return null;
+        }
+        var (classification, note) = ClassifyIdentifier(value);
+        Record(report, sourcePath, targetPath, classification, value, value, note);
+        return value;
+    }
+
+    /// <summary>
+    /// Classifies an ORUK identifier. ORUK/HSDS identifiers should be canonical RFC 4122 UUIDs, so
+    /// a valid UUID (any case) is <see cref="VodimClassification.Valid"/> and anything else is
+    /// <see cref="VodimClassification.Invalid"/> — with a note naming the kind of value present
+    /// (integer, slug, URL, malformed UUID, or string) to aid diagnosis. The value is still carried
+    /// through to the <c>@id</c> (a node must have an identifier); the classification records the
+    /// data-quality defect. An empty value is left to the caller's required-field handling.
+    /// </summary>
+    private static (VodimClassification Class, string? Note) ClassifyIdentifier(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value) || Guid.TryParseExact(value, "D", out _))
+            return (VodimClassification.Valid, null);
+        return (VodimClassification.Invalid,
+            $"Identifier '{Truncate(value, 40)}' is not a valid UUID (kind: " +
+            $"{DescribeIdentifierKind(value)}); ORUK identifiers should be RFC 4122 UUIDs.");
+    }
+
+    /// <summary>Names the kind of a non-UUID identifier value, for diagnostics in the report.</summary>
+    private static string DescribeIdentifierKind(string value)
+    {
+        if (LooksLikeMalformedUuid(value)) return "malformed UUID";
+        if (value.All(char.IsAsciiDigit)) return "integer";
+        if (Uri.TryCreate(value, UriKind.Absolute, out var uri)
+            && (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps))
+            return "URL";
+        if (SlugRegex.IsMatch(value)) return "slug";
+        return "string";
+    }
+
+    /// <summary>
+    /// True when <paramref name="value"/> looks like an attempt at a canonical UUID — five
+    /// hyphen-separated groups of hex digits — but is not a valid one. Canonical UUIDs (any case)
+    /// and values that are plainly a different id scheme both return false.
+    /// </summary>
+    private static bool LooksLikeMalformedUuid(string value)
+    {
+        // A canonical 8-4-4-4-12 UUID (upper or lower case) is well-formed — not a defect.
+        if (Guid.TryParseExact(value, "D", out _)) return false;
+
+        // Otherwise only flag a clear attempt at that layout: exactly five non-empty hex groups.
+        var groups = value.Split('-');
+        if (groups.Length != 5) return false;
+        foreach (var group in groups)
+            if (group.Length == 0 || !group.All(char.IsAsciiHexDigit))
+                return false;
+        return true;
     }
 
     // ── Collection-level reporting helpers ────────────────────────────────────────
