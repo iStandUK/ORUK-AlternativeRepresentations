@@ -20,6 +20,11 @@
     "aliases": ["dorset"]
   },
   {
+    "url": "https://uat.dorset.orta.localplacesolutions.co.uk/aggregator/services",
+    "name": "Dorset (UAT)",
+    "aliases": ["dorset-uat", "dorset-test"]
+  },
+  {
     "url": "https://openreferral.localgovdrupal.org/openreferral/v1",
     "name": "Cumbria",
     "aliases": ["cumbria"]
