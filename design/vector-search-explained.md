@@ -56,35 +56,47 @@ That is why it helps to picture the whole directory as a map — one where posit
 
 ## The Map Of Meaning
 
-Below are eight real services from the ORUK feeds, placed by what they mean.  The final point is not a service at all — it is a resident's question, turned into numbers the same way and dropped onto the same map.
+Below are eight real services from the ORUK feeds, placed by what they mean.
+
+The **large orange point is not a service at all.**  It is a resident's question — *"can I do yoga while I'm pregnant?"* — turned into numbers by the very same model, and dropped onto the very same map.  Every small green point is a real service.
 
 ```mermaid
 quadrantChart
-    title Eight real services placed by meaning
-    x-axis "Open to anyone" --> "Aimed at a specific group"
+    title Eight real services in green, and one resident's question in orange
+    x-axis "Open to anyone" --> "Aimed at a life stage"
     y-axis "Not yoga" --> "Clearly yoga"
-    quadrant-1 Yoga for a specific group
+    quadrant-1 Yoga for a life stage
     quadrant-2 Yoga for anyone
-    quadrant-3 Not yoga
-    quadrant-4 Specialist but not yoga
-    Pregnancy yoga Farnborough: [0.82, 0.88]
-    Postnatal mum and baby yoga: [0.78, 0.81]
-    Gentle yoga: [0.64, 0.76]
-    Therapeutic chair yoga: [0.71, 0.71]
-    Beginners yoga: [0.32, 0.86]
-    Hatha yoga for beginners: [0.27, 0.79]
-    Leisure centre gym: [0.19, 0.17]
-    Monday walking group: [0.31, 0.24]
-    ASKED yoga while pregnant: [0.86, 0.84]
+    quadrant-3 Other activities
+    quadrant-4 Nothing sits here
+    Beginners yoga: [0.10, 0.94] radius: 5, color: #1D9E75, stroke-color: #0F6E56
+    Hatha yoga class: [0.20, 0.82] radius: 5, color: #1D9E75, stroke-color: #0F6E56
+    Gentle yoga: [0.38, 0.92] radius: 5, color: #1D9E75, stroke-color: #0F6E56
+    Chair yoga: [0.44, 0.76] radius: 5, color: #1D9E75, stroke-color: #0F6E56
+    Pregnancy yoga Farnborough: [0.66, 0.95] radius: 5, color: #1D9E75, stroke-color: #0F6E56
+    Mum and baby yoga: [0.86, 0.84] radius: 5, color: #1D9E75, stroke-color: #0F6E56
+    Leisure centre gym: [0.12, 0.16] radius: 5, color: #1D9E75, stroke-color: #0F6E56
+    Walking group: [0.26, 0.28] radius: 5, color: #1D9E75, stroke-color: #0F6E56
+    Yoga while pregnant?: [0.76, 0.68] radius: 14, color: #D85A30, stroke-color: #4A1B0C, stroke-width: 3px
 ```
 
 Three things to notice:
 
-1. **The pregnancy and postnatal classes sit together.**  Nobody tagged them as a group; the model placed them there because their descriptions mean similar things.
+1. **The pregnancy and postnatal classes sit together.**  Nobody tagged them as a group; they landed there because their descriptions mean similar things.
 2. **The leisure centre and the walking group sit far away.**  They are physical activity, but they are not yoga, and the distance shows it.
-3. **The question lands in the right neighbourhood**, even though it shares almost no words with the class descriptions.  Answering it is then simply a matter of reading off the nearest few points.
+3. **The question lands among the right services**, even though it shares almost no words with their descriptions.  Answering it is then simply a matter of reading off the nearest few points.
 
-> **Caveat.**  The real map has hundreds of dimensions, not two.  The picture above is a flattening, and the axis labels are a convenience for the reader — in reality the directions have no names.  The groupings shown are a reading of the descriptions, not measured distances.
+Measuring from the orange point to each service gives the order the directory would return.  The two closest are exactly the two classes a human would have picked:
+
+| Rank | Service | Distance from the question |
+|---:|---|---:|
+| 1 | Mum and baby yoga | 0.19 |
+| 2 | Pregnancy yoga Farnborough | 0.29 |
+| 3 | Chair yoga | 0.33 |
+| … | … | … |
+| 8 | Leisure centre gym | 0.83 |
+
+> **Caveat.**  The real map has hundreds of dimensions, not two.  The picture above is a flattening, and the axis labels are a convenience for the reader — in reality the directions have no names.  The positions are a reading of the service descriptions rather than measured embeddings; the distances in the table are measured from those positions, so they show how the ranking *works*, not what a particular model would actually return.
 
 ---
 
@@ -138,12 +150,12 @@ All eight are live records retrieved from the configured feeds.
 | On the diagram | Service | Organisation | Feed |
 |---|---|---|---|
 | Pregnancy yoga Farnborough | Hello And Flow Pregnancy — Pregnancy Yoga Farnborough | YogaBellies Farnborough, Fleet & Camberley | Open Sessions |
-| Postnatal mum and baby yoga | Hello And Flow Postnatal — Postnatal Mum & Baby Yoga | YogaBellies Farnborough, Fleet & Camberley | Open Sessions |
+| Mum and baby yoga | Hello And Flow Postnatal — Postnatal Mum & Baby Yoga | YogaBellies Farnborough, Fleet & Camberley | Open Sessions |
 | Beginners yoga | Beginners Yoga | The Cambrian Community Centre | Open Sessions |
-| Hatha yoga for beginners | Hatha Yoga for Beginners | 1Leisure Medina | Open Sessions |
+| Hatha yoga class | Hatha Yoga for Beginners | 1Leisure Medina | Open Sessions |
 | Gentle yoga | Gentle Yoga | Stay Zen Yoga | Open Sessions |
-| Therapeutic chair yoga | Therapeutic Chair Yoga | Heart Within Yoga | Bristol |
+| Chair yoga | Therapeutic Chair Yoga | Heart Within Yoga | Bristol |
 | Leisure centre gym | Bradley Stoke Leisure Centre | Circadian Trust / Active Lifestyles | Bristol |
-| Monday walking group | Activities at KWHLC | Knowle West Healthy Living Centre | Bristol |
+| Walking group | Activities at KWHLC | Knowle West Healthy Living Centre | Bristol |
 
 The Farnborough and Fleet classes are the Hampshire examples.  There is no Hampshire local authority feed in [`feeds.json`](../feeds.json) — they reach the directory through the national **Open Sessions (OpenActive)** feed, which is a useful illustration in its own right of how national feeds fill local gaps.
