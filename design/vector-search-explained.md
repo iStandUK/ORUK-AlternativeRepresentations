@@ -62,7 +62,7 @@ The **large orange point is not a service at all.**  It is a resident's question
 
 ```mermaid
 quadrantChart
-    title Eight real services in green, and one resident's question in orange
+    title Map of meaning
     x-axis "Open to anyone" --> "Aimed at a life stage"
     y-axis "Not yoga" --> "Clearly yoga"
     quadrant-1 Yoga for a life stage
