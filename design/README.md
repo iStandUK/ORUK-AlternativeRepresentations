@@ -16,6 +16,7 @@ The documents here explore **what becomes possible** when an AI assistant can qu
 | [mcp-server-design.md](mcp-server-design.md) | C# implementation design: project structure, `ModelContextProtocol` SDK, tool classes, taxonomy cache, stdio transport, development workflow, and path to HTTP deployment |
 | [personas.md](personas.md) | Four representative UK residents who would benefit, with demographic context |
 | [use-cases.md](use-cases.md) | Concrete use cases derived from each persona, with example AI conversations |
+| [vector-search-explained.md](vector-search-explained.md) | Non-technical explanation of embeddings and vector databases, using real yoga classes from the feeds |
 
 ## Reading Order
 
@@ -25,3 +26,4 @@ The documents here explore **what becomes possible** when an AI assistant can qu
 4. [mcp-server-design.md](mcp-server-design.md) — C# technical design for the MCP server host
 5. [personas.md](personas.md) — who benefits and why
 6. [use-cases.md](use-cases.md) — what it looks like in practice
+7. [vector-search-explained.md](vector-search-explained.md) — background: how meaning-based search would differ from word matching
