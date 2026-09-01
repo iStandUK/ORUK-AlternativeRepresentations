@@ -443,37 +443,39 @@ public class OrukToSchemaOrgTransformerTests
     // ── VODIM: Other classifications ──────────────────────────────────────────────
 
     [Fact]
-    public void Transform_UnrecognisedOrukStatus_RecordsOther()
+    public void Transform_UnrecognisedOrukStatus_RecordsInvalid()
     {
+        // A status outside the ORUK vocabulary is not a valid value → Invalid (not Other).
         var service = MinimalService();
         service.Status = "pending-review";
         var result = _sut.Transform(service, _opts);
         var rec = FindRecord(result.Report, "service.status");
 
-        Assert.Equal(VodimClassification.Other, rec?.Classification);
+        Assert.Equal(VodimClassification.Invalid, rec?.Classification);
     }
 
     [Fact]
-    public void Transform_SentinelMinAge_RecordsOther()
+    public void Transform_SentinelMinAge_RecordsInvalid()
     {
-        // Bristol OPD uses -1 as "no minimum age" — non-standard but recognisable
+        // Bristol OPD uses -1 as "no minimum age" — a non-standard sentinel, out of the valid
+        // range (age ≥ 0), so it is Invalid rather than Other.
         var service = MinimalService();
         service.MinimumAge = -1;
         var result = _sut.Transform(service, _opts);
         var rec = FindRecord(result.Report, "service.minimum_age");
 
-        Assert.Equal(VodimClassification.Other, rec?.Classification);
+        Assert.Equal(VodimClassification.Invalid, rec?.Classification);
     }
 
     [Fact]
-    public void Transform_SentinelMaxAge_RecordsOther()
+    public void Transform_SentinelMaxAge_RecordsInvalid()
     {
         var service = MinimalService();
         service.MaximumAge = -1;
         var result = _sut.Transform(service, _opts);
         var rec = FindRecord(result.Report, "service.maximum_age");
 
-        Assert.Equal(VodimClassification.Other, rec?.Classification);
+        Assert.Equal(VodimClassification.Invalid, rec?.Classification);
     }
 
     // ── VODIM: Default classifications ────────────────────────────────────────────
@@ -545,8 +547,10 @@ public class OrukToSchemaOrgTransformerTests
     }
 
     [Fact]
-    public void Transform_ScheduleWithLongFormDay_RecordsOther()
+    public void Transform_ScheduleWithLongFormDay_RecordsInvalid()
     {
+        // Long-form day names are not valid RRULE BYDAY short-form → Invalid (source nonconformant),
+        // even though it still maps to the correct Schema.org day.
         var service = MinimalService();
         service.Schedules.Add(new OrukSchedule
         {
@@ -558,7 +562,7 @@ public class OrukToSchemaOrgTransformerTests
         var result = _sut.Transform(service, _opts);
         var rec = FindRecords(result.Report, "byday").FirstOrDefault();
 
-        Assert.Equal(VodimClassification.Other, rec?.Classification);
+        Assert.Equal(VodimClassification.Invalid, rec?.Classification);
     }
 
     [Fact]
@@ -747,7 +751,7 @@ public class OrukToSchemaOrgTransformerTests
 
         var rec = FindRecord(result.Report, "interpretation_services");
         Assert.NotNull(rec);
-        Assert.Equal(VodimClassification.Other, rec!.Classification);
+        Assert.Equal(VodimClassification.Valid, rec!.Classification);
         Assert.Equal("British Sign Language", rec.MappedValue);
     }
 
@@ -755,7 +759,7 @@ public class OrukToSchemaOrgTransformerTests
     public void Transform_InterpretationServices_SupersededByStructuredLanguages()
     {
         // Issue #13: VODIM must reflect that interpretation_services was NOT used when
-        // structured languages exist; classification must NOT be Valid/Other with mapped output.
+        // structured languages exist; the value is present but not emitted → Unmapped.
         var service = MinimalService();
         service.InterpretationServices = "Some free-text languages";
         service.Languages.Add(new OrukLanguage { Id = "lang-1", Name = "Welsh", Code = "cy" });
@@ -766,10 +770,10 @@ public class OrukToSchemaOrgTransformerTests
         Assert.Single(node.AvailableLanguage!);
         Assert.Equal("Welsh", node.AvailableLanguage![0].Name);
 
-        // VODIM must show Other (present but not used) with null mapped value.
+        // VODIM must show Unmapped (present but not used) with null mapped value.
         var rec = FindRecord(result.Report, "interpretation_services");
         Assert.NotNull(rec);
-        Assert.Equal(VodimClassification.Other, rec!.Classification);
+        Assert.Equal(VodimClassification.Unmapped, rec!.Classification);
         Assert.Null(rec.MappedValue);
         Assert.Contains("Superseded", rec.Note ?? string.Empty, StringComparison.OrdinalIgnoreCase);
     }
@@ -805,7 +809,7 @@ public class OrukToSchemaOrgTransformerTests
 
         var rec = FindRecord(result.Report, "interpretation_services");
         Assert.NotNull(rec);
-        Assert.Equal(VodimClassification.Other, rec!.Classification);
+        Assert.Equal(VodimClassification.Valid, rec!.Classification);
         Assert.Contains("HTML markup stripped", rec.Note ?? string.Empty, StringComparison.OrdinalIgnoreCase);
     }
 
@@ -907,8 +911,10 @@ public class OrukToSchemaOrgTransformerTests
     }
 
     [Fact]
-    public void Transform_OrganizationWebsiteFallback_RecordsOther()
+    public void Transform_OrganizationWebsiteFallback_RecordsValid()
     {
+        // The website value is a valid URL used for Organization.url; only the source field is
+        // non-standard (noted). Present + mapped → Valid, not Other.
         var service = MinimalService();
         service.Organization = new OrukOrganization
         {
@@ -920,7 +926,8 @@ public class OrukToSchemaOrgTransformerTests
         var result = _sut.Transform(service, _opts);
         var rec = FindRecord(result.Report, "organization.website");
 
-        Assert.Equal(VodimClassification.Other, rec?.Classification);
+        Assert.Equal(VodimClassification.Valid, rec?.Classification);
+        Assert.Contains("website", rec?.Note ?? string.Empty, StringComparison.OrdinalIgnoreCase);
     }
 
     // ── Report summary ────────────────────────────────────────────────────────────
@@ -1108,9 +1115,9 @@ public class OrukToSchemaOrgTransformerTests
     }
 
     [Fact]
-    public void Transform_BristolFixture_SentinelAgesRecordedAsOther()
+    public void Transform_BristolFixture_SentinelAgesRecordedAsInvalid()
     {
-        // Bristol OPD sends minimum_age: -1 and maximum_age: -1
+        // Bristol OPD sends minimum_age: -1 and maximum_age: -1 — an out-of-range sentinel → Invalid.
         var json = File.ReadAllText(
             Path.Combine(AppContext.BaseDirectory, "fixtures", "bristol-service-1625ip.json"));
         var service = JsonSerializer.Deserialize<OrukService>(json,
@@ -1120,8 +1127,8 @@ public class OrukToSchemaOrgTransformerTests
         var minRec = FindRecord(result.Report, "minimum_age");
         var maxRec = FindRecord(result.Report, "maximum_age");
 
-        Assert.Equal(VodimClassification.Other, minRec?.Classification);
-        Assert.Equal(VodimClassification.Other, maxRec?.Classification);
+        Assert.Equal(VodimClassification.Invalid, minRec?.Classification);
+        Assert.Equal(VodimClassification.Invalid, maxRec?.Classification);
     }
 
     [Fact]
@@ -1139,7 +1146,7 @@ public class OrukToSchemaOrgTransformerTests
     }
 
     [Fact]
-    public void Transform_BristolFixture_ReportHasNoInvalidClassifications()
+    public void Transform_BristolFixture_OnlyInvalidsAreTheSentinelAges()
     {
         var json = File.ReadAllText(
             Path.Combine(AppContext.BaseDirectory, "fixtures", "bristol-service-1625ip.json"));
@@ -1147,12 +1154,15 @@ public class OrukToSchemaOrgTransformerTests
             new JsonSerializerOptions { PropertyNameCaseInsensitive = true })!;
 
         var result = _sut.Transform(service, _opts);
-        var invalids = result.Report.ByClassification(VodimClassification.Invalid);
+        var invalidPaths = result.Report.ByClassification(VodimClassification.Invalid)
+            .Select(r => r.SourcePath).ToList();
 
-        // Bristol fixture should have no invalid fields — log them if found for visibility
-        Assert.True(invalids.Count == 0,
-            $"Expected 0 Invalid records but got {invalids.Count}: " +
-            string.Join("; ", invalids.Select(r => r.SourcePath)));
+        // The Bristol fixture's only Invalids are its -1 sentinel ages; any others are unexpected.
+        var unexpected = invalidPaths
+            .Where(p => p is not ("service.minimum_age" or "service.maximum_age"))
+            .ToList();
+        Assert.True(unexpected.Count == 0,
+            "Unexpected Invalid records: " + string.Join("; ", unexpected));
     }
 
     // ── UPRN → Place.identifier ───────────────────────────────────────────────────
@@ -1245,7 +1255,7 @@ public class OrukToSchemaOrgTransformerTests
     public void Transform_BothUprnSources_ExternalWins_ScalarRecordedSuperseded()
     {
         // When both sources are present the structured external_identifier[UPRN] wins,
-        // and VODIM must not double-count: the scalar is Other (present, not emitted).
+        // and VODIM must not double-count: the scalar is Unmapped (present, not emitted).
         var location = new OrukLocation { Id = "loc-1", Uprn = "111111111111" };
         location.ExternalIdentifiers.Add(new OrukExternalIdentifier
         {
@@ -1265,7 +1275,7 @@ public class OrukToSchemaOrgTransformerTests
         Assert.Equal(VodimClassification.Valid, externalRec?.Classification);
         Assert.Equal("999999999999", externalRec?.MappedValue);
 
-        Assert.Equal(VodimClassification.Other, scalarRec?.Classification);
+        Assert.Equal(VodimClassification.Unmapped, scalarRec?.Classification);
         Assert.Null(scalarRec?.MappedValue);
         Assert.Contains("Superseded", scalarRec?.Note ?? string.Empty, StringComparison.OrdinalIgnoreCase);
     }
