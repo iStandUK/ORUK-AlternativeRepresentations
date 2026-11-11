@@ -1,5 +1,11 @@
 # Specification: lexical ESD classification as an ORUK MCP server capability
 
+> [!WARNING]
+> **Superseded (11 November 2026). Do not implement.**
+> Lexical/regex classification can't separate meaning: *"we run a yoga class"* and *"find yoga classes near you"* match the same patterns. Fitting services to ESD Service Types also conflates "provision of information about X" with services that deliver X.
+> Classification is now **meaning-based**, using a taxonomy **discovered from clusters in the feeds**. See [oruk-service-taxonomy: research study](https://github.com/iStandUK/oruk-service-taxonomy/blob/main/docs/research-study.md).
+> This document is kept as a historical record. Its feed-profiling evidence (§2) is still useful background.
+
 **Version:** 1.0 · **Date:** 21 July 2026 · **Author:** prepared for Nicholas Oughtibridge
 **Audience:** Claude Code, implementing against the existing ORUK MCP server
 **Companion artifact:** `esd-lexical-rules-v2.json` (the versioned rule pack this spec defines)

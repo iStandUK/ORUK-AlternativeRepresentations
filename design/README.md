@@ -17,8 +17,8 @@ The documents here explore **what becomes possible** when an AI assistant can qu
 | [personas.md](personas.md) | Four representative UK residents who would benefit, with demographic context |
 | [use-cases.md](use-cases.md) | Concrete use cases derived from each persona, with example AI conversations |
 | [mcp-tools-roadmap.md](mcp-tools-roadmap.md) | Current MCP tool surface, gap analysis against the ORUK v3 / HSDS entities, and proposed future tools |
-| [oruk-mcp-lexical-classification-spec.md](oruk-mcp-lexical-classification-spec.md) | Specification for deterministic ESD service-type and function classification from service free text, with confidence and provenance |
-| [esd-lexical-rules-v2.json](esd-lexical-rules-v2.json) | The versioned ESD lexical rule pack defined by the classification spec |
+| [oruk-mcp-lexical-classification-spec.md](oruk-mcp-lexical-classification-spec.md) | **Superseded (Nov 2026)** by meaning-based classification in [oruk-service-taxonomy](https://github.com/iStandUK/oruk-service-taxonomy). Historical: specification for deterministic ESD service-type and function classification from service free text, with confidence and provenance |
+| [esd-lexical-rules-v2.json](esd-lexical-rules-v2.json) | **Superseded.** The versioned ESD lexical rule pack defined by the classification spec |
 | [vector-search-explained.md](vector-search-explained.md) | Non-technical explanation of embeddings and vector databases, using real yoga classes from the feeds |
 
 ## Reading Order
@@ -30,5 +30,5 @@ The documents here explore **what becomes possible** when an AI assistant can qu
 5. [mcp-tools-roadmap.md](mcp-tools-roadmap.md) — what the server exposes today and what is still missing
 6. [personas.md](personas.md) — who benefits and why
 7. [use-cases.md](use-cases.md) — what it looks like in practice
-8. [oruk-mcp-lexical-classification-spec.md](oruk-mcp-lexical-classification-spec.md) — deeper capability spec, with [esd-lexical-rules-v2.json](esd-lexical-rules-v2.json) as its rule pack
+8. [oruk-mcp-lexical-classification-spec.md](oruk-mcp-lexical-classification-spec.md) — **superseded**; historical capability spec, with [esd-lexical-rules-v2.json](esd-lexical-rules-v2.json) as its rule pack
 9. [vector-search-explained.md](vector-search-explained.md) — background: how meaning-based search would differ from word matching
